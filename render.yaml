@@ -1,0 +1,21 @@
+services:
+  # Backend API Service (Free Tier)
+  - type: web
+    name: ai-product-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Enter your free Neon.tech or Supabase PostgreSQL URL in Render dashboard
+      - key: REDIS_URL
+        sync: false  # Enter your free Upstash Redis URL in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false  # Enter your Gemini API key in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
