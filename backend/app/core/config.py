@@ -26,12 +26,13 @@ class Settings(BaseSettings):
         "http://localhost:3000"
     ]
 
-    # PostgreSQL Config
-    POSTGRES_SERVER: str
+    ENVIRONMENT: str = "development"
+
+    POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "ai_product_os"
     DATABASE_URL: str | None = None
     SQLALCHEMY_DATABASE_URI: str | None = None
 
@@ -51,21 +52,20 @@ class Settings(BaseSettings):
         if values.get("ENVIRONMENT") == "testing":
             return "sqlite:///./test.db"
         
-        import socket
         host = values.get("POSTGRES_SERVER", "localhost")
         port = int(values.get("POSTGRES_PORT", 5432))
+        postgres_uri = f"postgresql+psycopg2://{values.get('POSTGRES_USER', 'postgres')}:{values.get('POSTGRES_PASSWORD', 'postgres')}@{host}:{port}/{values.get('POSTGRES_DB', 'ai_product_os')}"
+
+        env = values.get("ENVIRONMENT", "development")
+        if env in ("production", "staging"):
+            return postgres_uri
+
+        import socket
         try:
-            with socket.create_connection((host, port), timeout=1.0):
+            with socket.create_connection((host, port), timeout=0.5):
                 pass
-            return f"postgresql+psycopg2://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@{host}:{port}/{values.get('POSTGRES_DB')}"
-        except Exception as e:
-            env = values.get("ENVIRONMENT", "development")
-            if env in ("production", "staging"):
-                raise RuntimeError(
-                    f"FATAL: PostgreSQL server at {host}:{port} is unreachable in {env} environment. "
-                    "Refusing to fall back to SQLite to prevent ephemeral data loss. "
-                    f"Connection error: {e}"
-                ) from e
+            return postgres_uri
+        except Exception:
             print(f"PostgreSQL server at {host}:{port} is unreachable. Falling back to local SQLite: sqlite:///./development.db")
             return "sqlite:///./development.db"
 
