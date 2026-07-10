@@ -23,7 +23,11 @@ class Settings(BaseSettings):
 
     # CORS settings
     BACKEND_CORS_ORIGINS: Annotated[list[str], BeforeValidator(parse_cors)] = [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:8000",
+        "https://ai-product-manager-roan.vercel.app",
+        "*",
     ]
 
     ENVIRONMENT: str = "development"

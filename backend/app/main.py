@@ -54,9 +54,11 @@ from app.middleware.security import RateLimitingMiddleware, SecurityHeadersMiddl
 
 # CORS configuration
 if settings.BACKEND_CORS_ORIGINS:
+    allow_all = "*" in settings.BACKEND_CORS_ORIGINS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_origins=["*"] if allow_all else settings.BACKEND_CORS_ORIGINS,
+        allow_origin_regex=r"https://.*\.vercel\.app" if not allow_all else None,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
