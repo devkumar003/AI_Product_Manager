@@ -6,8 +6,8 @@ Supports sequential, parallel, conditional, and dynamic routing.
 """
 
 import asyncio
-import time
 import logging
+import time
 from typing import Any
 
 logger = logging.getLogger("app.ai.agents.collaboration")
@@ -21,10 +21,22 @@ class AgentCollaborationChain:
 
     # Default sequential pipeline order
     DEFAULT_PIPELINE = [
-        "ceo", "business_analyst", "product_manager", "market_research",
-        "technical_architect", "database_architect", "api_architect",
-        "backend_architect", "frontend_architect", "ux_designer",
-        "qa", "security", "devops", "documentation", "analytics", "review",
+        "ceo",
+        "business_analyst",
+        "product_manager",
+        "market_research",
+        "technical_architect",
+        "database_architect",
+        "api_architect",
+        "backend_architect",
+        "frontend_architect",
+        "ux_designer",
+        "qa",
+        "security",
+        "devops",
+        "documentation",
+        "analytics",
+        "review",
     ]
 
     def __init__(self, orchestrator: Any) -> None:
@@ -52,7 +64,9 @@ class AgentCollaborationChain:
                     user_id=user_id,
                     input_data=agent_input,
                 )
-                results[agent_name] = result.model_dump() if hasattr(result, "model_dump") else result
+                results[agent_name] = (
+                    result.model_dump() if hasattr(result, "model_dump") else result
+                )
                 context[f"{agent_name}_output"] = results[agent_name]
                 logger.info(f"Agent '{agent_name}' completed in chain")
             except Exception as e:
@@ -63,7 +77,11 @@ class AgentCollaborationChain:
             "pipeline": agents,
             "results": results,
             "total_agents": len(agents),
-            "completed": sum(1 for r in results.values() if isinstance(r, dict) and r.get("status") != "failed"),
+            "completed": sum(
+                1
+                for r in results.values()
+                if isinstance(r, dict) and r.get("status") != "failed"
+            ),
             "total_time_ms": (time.time() - start) * 1000,
         }
 
@@ -80,10 +98,14 @@ class AgentCollaborationChain:
         async def _run(name: str) -> tuple[str, Any]:
             try:
                 result = await self.orchestrator.execute_agent(
-                    agent_name=name, workspace_id=workspace_id,
-                    user_id=user_id, input_data={"idea": shared.get("idea", ""), **shared},
+                    agent_name=name,
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    input_data={"idea": shared.get("idea", ""), **shared},
                 )
-                return name, result.model_dump() if hasattr(result, "model_dump") else result
+                return name, (
+                    result.model_dump() if hasattr(result, "model_dump") else result
+                )
             except Exception as e:
                 return name, {"status": "failed", "error": str(e)}
 
@@ -115,8 +137,10 @@ class AgentCollaborationChain:
 
             try:
                 result = await self.orchestrator.execute_agent(
-                    agent_name=agent_name, workspace_id=workspace_id,
-                    user_id=user_id, input_data={"idea": ctx.get("idea", ""), **ctx},
+                    agent_name=agent_name,
+                    workspace_id=workspace_id,
+                    user_id=user_id,
+                    input_data={"idea": ctx.get("idea", ""), **ctx},
                 )
                 dump = result.model_dump() if hasattr(result, "model_dump") else result
                 results[agent_name] = dump

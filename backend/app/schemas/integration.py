@@ -1,21 +1,22 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Any
+from uuid import UUID
 
+from pydantic import BaseModel
 
 # ══════════════════════════════════════════════════
 # Plugin Schemas
 # ══════════════════════════════════════════════════
 
+
 class IntegrationPluginBase(BaseModel):
     name: str
     slug: str
-    description: Optional[str] = None
+    description: str | None = None
     plugin_version: str = "1.0.0"
     plugin_type: str = "OAuth"
     category: str = "Developer Tools"
-    settings_schema: Optional[Dict[str, Any]] = None
+    settings_schema: dict[str, Any] | None = None
     is_active: bool = True
 
 
@@ -24,13 +25,13 @@ class IntegrationPluginCreate(IntegrationPluginBase):
 
 
 class IntegrationPluginUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    plugin_version: Optional[str] = None
-    plugin_type: Optional[str] = None
-    category: Optional[str] = None
-    settings_schema: Optional[Dict[str, Any]] = None
-    is_active: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    plugin_version: str | None = None
+    plugin_type: str | None = None
+    category: str | None = None
+    settings_schema: dict[str, Any] | None = None
+    is_active: bool | None = None
 
 
 class IntegrationPluginResponse(IntegrationPluginBase):
@@ -46,9 +47,10 @@ class IntegrationPluginResponse(IntegrationPluginBase):
 # Connection Schemas
 # ══════════════════════════════════════════════════
 
+
 class IntegrationConnectionBase(BaseModel):
     plugin_id: UUID
-    config: Optional[Dict[str, Any]] = None
+    config: dict[str, Any] | None = None
     status: str = "Connected"
 
 
@@ -57,17 +59,17 @@ class IntegrationConnectionCreate(IntegrationConnectionBase):
 
 
 class IntegrationConnectionUpdate(BaseModel):
-    config: Optional[Dict[str, Any]] = None
-    status: Optional[str] = None
-    error_message: Optional[str] = None
+    config: dict[str, Any] | None = None
+    status: str | None = None
+    error_message: str | None = None
 
 
 class IntegrationConnectionResponse(IntegrationConnectionBase):
     id: UUID
     workspace_id: UUID
-    last_sync_at: Optional[datetime] = None
-    error_message: Optional[str] = None
-    plugin: Optional[IntegrationPluginResponse] = None
+    last_sync_at: datetime | None = None
+    error_message: str | None = None
+    plugin: IntegrationPluginResponse | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -79,10 +81,11 @@ class IntegrationConnectionResponse(IntegrationConnectionBase):
 # MCP Schemas
 # ══════════════════════════════════════════════════
 
+
 class MCPServerBase(BaseModel):
     name: str
     url: str
-    headers: Optional[Dict[str, str]] = None
+    headers: dict[str, str] | None = None
     is_active: bool = True
 
 
@@ -101,28 +104,29 @@ class MCPServerResponse(MCPServerBase):
 
 class MCPToolCallRequest(BaseModel):
     tool_name: str
-    arguments: Dict[str, Any] = {}
+    arguments: dict[str, Any] = {}
 
 
 # ══════════════════════════════════════════════════
 # Webhook Schemas
 # ══════════════════════════════════════════════════
 
+
 class IntegrationWebhookBase(BaseModel):
     name: str
     target_url: str
-    events: List[str]
+    events: list[str]
     is_active: bool = True
 
 
 class IntegrationWebhookCreate(IntegrationWebhookBase):
-    secret_token: Optional[str] = None
+    secret_token: str | None = None
 
 
 class IntegrationWebhookResponse(IntegrationWebhookBase):
     id: UUID
     workspace_id: UUID
-    secret_token: Optional[str] = None
+    secret_token: str | None = None
     created_at: datetime
 
     class Config:
@@ -133,14 +137,15 @@ class IntegrationWebhookResponse(IntegrationWebhookBase):
 # Log Schemas
 # ══════════════════════════════════════════════════
 
+
 class IntegrationLogResponse(BaseModel):
     id: UUID
     workspace_id: UUID
-    connection_id: Optional[UUID] = None
+    connection_id: UUID | None = None
     action: str
     status: str
-    payload: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
+    payload: dict[str, Any] | None = None
+    error_message: str | None = None
     created_at: datetime
 
     class Config:
@@ -151,6 +156,7 @@ class IntegrationLogResponse(BaseModel):
 # Operations Request Schemas
 # ══════════════════════════════════════════════════
 
+
 class OAuthExchangeRequest(BaseModel):
     code: str
     redirect_uri: str
@@ -159,4 +165,4 @@ class OAuthExchangeRequest(BaseModel):
 
 class WebhookTriggerRequest(BaseModel):
     event: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]

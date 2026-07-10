@@ -29,4 +29,6 @@ class Project(BaseEntity):
     # Relationships
     workspace = relationship("Workspace")
     owner = relationship("User")
-    documents = relationship("Document", back_populates="project", cascade="all, delete-orphan")
+    documents = relationship(
+        "Document", back_populates="project", cascade="all, delete-orphan"
+    )

@@ -1,14 +1,14 @@
-from app.services.ai.agents.base import BaseAgent, AgentConfig
+from app.services.ai.agents.base import AgentConfig, BaseAgent
 from app.services.ai.agents.product_agents import (
-    ProductManagerAgent,
-    PRDGeneratorAgent,
-    TechnicalArchitectAgent,
-    IdeaInput,
-    RefinedIdeaOutput,
-    PRDInput,
-    PRDOutput,
     ArchitectInput,
     ArchitectureOutput,
+    IdeaInput,
+    PRDGeneratorAgent,
+    PRDInput,
+    PRDOutput,
+    ProductManagerAgent,
+    RefinedIdeaOutput,
+    TechnicalArchitectAgent,
 )
 
 __all__ = [

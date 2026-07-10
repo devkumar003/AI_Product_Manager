@@ -1,7 +1,10 @@
 import json
 import time
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.ai.providers.base import BaseProvider
 from app.ai.schemas import AIResponse, StreamingToken, TokenUsage
 
@@ -41,7 +44,9 @@ class OllamaProvider(BaseProvider):
             data = response.json()
             content = data["message"]["content"]
 
-            prompt_tokens = sum(self.token_count(msg.get("content", "")) for msg in messages)
+            prompt_tokens = sum(
+                self.token_count(msg.get("content", "")) for msg in messages
+            )
             completion_tokens = self.token_count(content)
 
             return AIResponse(
@@ -72,11 +77,15 @@ class OllamaProvider(BaseProvider):
         }
 
         async with httpx.AsyncClient(timeout=config.get("timeout", 60.0)) as client:
-            async with client.stream("POST", f"{self.url}/chat", json=payload) as response:
+            async with client.stream(
+                "POST", f"{self.url}/chat", json=payload
+            ) as response:
                 if response.status_code != 200:
                     body = await response.aread()
                     yield StreamingToken(
-                        token="", done=True, error=f"Ollama Stream failed: {body.decode('utf-8')}"
+                        token="",
+                        done=True,
+                        error=f"Ollama Stream failed: {body.decode('utf-8')}",
                     )
                     return
 

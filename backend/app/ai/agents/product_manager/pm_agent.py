@@ -1,11 +1,14 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class PMAgentInput(BaseModel):
     strategy_summary: str = Field(..., description="Strategy summary from CEO Agent")
-    priority_focus: str = Field(default="MVP Features", description="Focus of prioritization")
+    priority_focus: str = Field(
+        default="MVP Features", description="Focus of prioritization"
+    )
 
 
 class PMAgent(BaseAgent[PMAgentInput, AgentResponse]):

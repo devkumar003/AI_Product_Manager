@@ -1,7 +1,10 @@
 import json
 import time
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.ai.providers.base import BaseProvider
 from app.ai.schemas import AIResponse, StreamingToken, TokenUsage
 
@@ -120,7 +123,9 @@ class ClaudeProvider(BaseProvider):
                 if response.status_code != 200:
                     body = await response.aread()
                     yield StreamingToken(
-                        token="", done=True, error=f"Claude Stream failed: {body.decode('utf-8')}"
+                        token="",
+                        done=True,
+                        error=f"Claude Stream failed: {body.decode('utf-8')}",
                     )
                     return
 
@@ -144,7 +149,9 @@ class ClaudeProvider(BaseProvider):
 
     async def embeddings(self, text: str, config: dict[str, Any]) -> list[float]:
         # Claude does not officially offer a native embeddings model. Expose mock/error fallback:
-        raise NotImplementedError("Anthropic Claude does not support embeddings API natively.")
+        raise NotImplementedError(
+            "Anthropic Claude does not support embeddings API natively."
+        )
 
     async def moderation(self, text: str, config: dict[str, Any]) -> bool:
         bad_words = ["unauthorized_injection", "malicious_exploit"]
@@ -157,4 +164,6 @@ class ClaudeProvider(BaseProvider):
         self, prompt_tokens: int, completion_tokens: int, model: str
     ) -> float:
         # Claude 3.5 Sonnet: $3.00 / M input, $15.00 / M output
-        return (prompt_tokens * 3.00 / 1_000_000) + (completion_tokens * 15.00 / 1_000_000)
+        return (prompt_tokens * 3.00 / 1_000_000) + (
+            completion_tokens * 15.00 / 1_000_000
+        )

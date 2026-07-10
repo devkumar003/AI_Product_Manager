@@ -1,24 +1,35 @@
 import logging
 from uuid import UUID
-from sqlalchemy.orm import Session
-from datetime import datetime
 
-from app.models.development import ReleasePlan, DeploymentPlan, SprintUpdate, DeveloperTaskAssignment
-from app.services.ai.llm_manager import llm_manager
+from sqlalchemy.orm import Session
+
+from app.models.development import (
+    DeploymentPlan,
+    DeveloperTaskAssignment,
+    ReleasePlan,
+    SprintUpdate,
+)
 from app.services.ai.agents.base import AgentConfig
+from app.services.ai.llm_manager import llm_manager
 
 logger = logging.getLogger("app.services.development.management")
 
 
 class DevelopmentManagement:
     def create_release_plan(
-        self, db: Session, workspace_id: UUID, version: str, name: str, description: str, scope: list[UUID]
+        self,
+        db: Session,
+        workspace_id: UUID,
+        version: str,
+        name: str,
+        description: str,
+        scope: list[UUID],
     ) -> ReleasePlan:
         """
         Release Planning Engine.
         """
         logger.info(f"Generating Release Plan: {version}")
-        
+
         # Invoke LLM to outline milestones and release notes
         prompt = (
             f"Generate release milestones and changelog schema for release version '{version}' named '{name}':\n"
@@ -30,7 +41,7 @@ class DevelopmentManagement:
             res = llm_manager.generate_sync(
                 prompt=prompt,
                 system_prompt="You are a Product Release Planner.",
-                config=AgentConfig(temperature=0.3)
+                config=AgentConfig(temperature=0.3),
             )
             notes = res.content
         except Exception:
@@ -38,8 +49,16 @@ class DevelopmentManagement:
 
         milestones = [
             {"phase": "Beta Launch", "due": "2 weeks", "scope": "Core Features"},
-            {"phase": "Bug Fix & Hardening", "due": "3 weeks", "scope": "Test coverage improvement"},
-            {"phase": "Production deploy", "due": "4 weeks", "scope": "Cloud migration"}
+            {
+                "phase": "Bug Fix & Hardening",
+                "due": "3 weeks",
+                "scope": "Test coverage improvement",
+            },
+            {
+                "phase": "Production deploy",
+                "due": "4 weeks",
+                "scope": "Cloud migration",
+            },
         ]
 
         release = ReleasePlan(
@@ -49,7 +68,7 @@ class DevelopmentManagement:
             description=description + f"\n\nMilestones Summary:\n{notes}",
             milestones=milestones,
             scope=scope,
-            status="Draft"
+            status="Draft",
         )
         db.add(release)
         db.commit()
@@ -57,13 +76,20 @@ class DevelopmentManagement:
         return release
 
     def create_deployment_plan(
-        self, db: Session, workspace_id: UUID, release_id: UUID, environment: str, provider: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        release_id: UUID,
+        environment: str,
+        provider: str,
     ) -> DeploymentPlan:
         """
         Deployment Planning Engine.
         """
-        logger.info(f"Creating Deployment Plan for release: {release_id} in {environment}")
-        
+        logger.info(
+            f"Creating Deployment Plan for release: {release_id} in {environment}"
+        )
+
         # Generate docker compose / kubernetes stubs
         manifests = {
             "docker-compose.yaml": (
@@ -92,9 +118,9 @@ class DevelopmentManagement:
                 "Build docker containers for production target.",
                 "Execute DB migrations and seeding.",
                 "Verify API health checkpoints.",
-                "Toggle route proxy target to new containers."
+                "Toggle route proxy target to new containers.",
             ],
-            status="Ready"
+            status="Ready",
         )
         db.add(plan)
         db.commit()
@@ -108,12 +134,12 @@ class DevelopmentManagement:
         Sprint Update Engine.
         """
         logger.info(f"Publishing Sprint update for: {sprint_name}")
-        
+
         burn_down = {
             "total_story_points": 40,
             "completed_story_points": 24,
             "days_remaining": 6,
-            "daily_history": [40, 38, 35, 30, 24]
+            "daily_history": [40, 38, 35, 30, 24],
         }
 
         update = SprintUpdate(
@@ -121,7 +147,7 @@ class DevelopmentManagement:
             sprint_name=sprint_name,
             burn_down_data=burn_down,
             progress_summary=progress_summary,
-            impediments=["Dependencies on external Slack notification webhook setup"]
+            impediments=["Dependencies on external Slack notification webhook setup"],
         )
         db.add(update)
         db.commit()
@@ -129,19 +155,25 @@ class DevelopmentManagement:
         return update
 
     def assign_developer_task(
-        self, db: Session, workspace_id: UUID, developer_name: str, planning_item_id: UUID, assigned_role: str, allocated_hours: float
+        self,
+        db: Session,
+        workspace_id: UUID,
+        developer_name: str,
+        planning_item_id: UUID,
+        assigned_role: str,
+        allocated_hours: float,
     ) -> DeveloperTaskAssignment:
         """
         Developer Task Assignment Engine.
         """
         logger.info(f"Assigning {developer_name} to planning item {planning_item_id}")
-        
+
         assignment = DeveloperTaskAssignment(
             workspace_id=workspace_id,
             developer_name=developer_name,
             planning_item_id=planning_item_id,
             assigned_role=assigned_role,
-            allocated_hours=allocated_hours
+            allocated_hours=allocated_hours,
         )
         db.add(assignment)
         db.commit()

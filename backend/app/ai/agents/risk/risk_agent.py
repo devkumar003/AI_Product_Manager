@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class RiskAgentInput(BaseModel):
-    project_summary: str = Field(..., description="Combined project context from prior agents")
+    project_summary: str = Field(
+        ..., description="Combined project context from prior agents"
+    )
 
 
 class RiskAgent(BaseAgent[RiskAgentInput, AgentResponse]):

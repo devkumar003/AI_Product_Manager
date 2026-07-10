@@ -1,11 +1,16 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class TechArchitectInput(BaseModel):
-    requirements_summary: str = Field(..., description="Business Analyst requirements details")
-    platform_type: str = Field(default="SaaS Web Application", description="Type of system architecture")
+    requirements_summary: str = Field(
+        ..., description="Business Analyst requirements details"
+    )
+    platform_type: str = Field(
+        default="SaaS Web Application", description="Type of system architecture"
+    )
 
 
 class TechArchitect(BaseAgent[TechArchitectInput, AgentResponse]):

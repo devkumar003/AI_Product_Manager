@@ -1,5 +1,7 @@
 import logging
+
 import redis
+
 from app.core.settings import settings
 
 logger = logging.getLogger("app.core.redis")
@@ -31,7 +33,9 @@ class CacheManager:
             self.client.ping()
             logger.info("Successfully connected to Redis cache provider.")
         except Exception as e:
-            logger.warning(f"Redis is unavailable: {e}. Cache manager falling back to local simulation.")
+            logger.warning(
+                f"Redis is unavailable: {e}. Cache manager falling back to local simulation."
+            )
             self.client = None
 
     def get(self, key: str) -> str | None:

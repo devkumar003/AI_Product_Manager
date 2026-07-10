@@ -1,43 +1,54 @@
-import time
 import logging
-from typing import Any, AsyncIterator
+import time
+from collections.abc import AsyncIterator
+from typing import Any
 
-from app.ai.core.llm_manager import LLMManager
-from app.ai.registry.agent_registry import AgentRegistry
-from app.ai.prompts.prompt_manager import PromptManager
-from app.ai.memory.memory_manager import ConversationMemory, WorkspaceMemory, OrganizationMemory
-from app.ai.tools.tool_framework import ToolRegistry
-from app.ai.telemetry.metrics import TelemetryRegistry
-from app.ai.utils.security import AISecurityManager
-from app.ai.schemas import AIRequest, AIResponse, AgentResponse, StreamingToken, TokenUsage
-from app.ai.exceptions import AIException, ValidationException
-from app.ai.agents.communication import AgentCommunicationBus, SharedContext
+from app.ai.agents.analytics import AnalyticsAgent
+from app.ai.agents.api_architect import APIArchitect
+from app.ai.agents.backend_architect import BackendArchitect
+from app.ai.agents.business_analyst import BAAgent
 
 # Agent imports — all 24 agents
-from app.ai.agents.CEO import CEOAgent, CEOAgentInput
-from app.ai.agents.product_manager import PMAgent, PMAgentInput
-from app.ai.agents.business_analyst import BAAgent, BAAgentInput
-from app.ai.agents.market_research import ResearchAgent, ResearchAgentInput
-from app.ai.agents.ux_designer import UXAgent, UXAgentInput
-from app.ai.agents.technical_architect import TechArchitect, TechArchitectInput
-from app.ai.agents.database_architect import DBArchitect, DBArchitectInput
-from app.ai.agents.api_architect import APIArchitect, APIArchitectInput
-from app.ai.agents.backend_architect import BackendArchitect, BackendArchitectInput
-from app.ai.agents.frontend_architect import FrontendArchitect, FrontendArchitectInput
-from app.ai.agents.roadmap import RoadmapAgent, RoadmapAgentInput
-from app.ai.agents.sprint import SprintAgent, SprintAgentInput
-from app.ai.agents.task import TaskAgent, TaskAgentInput
-from app.ai.agents.qa import QAAgent, QAAgentInput
-from app.ai.agents.security import SecurityAgent, SecurityAgentInput
-from app.ai.agents.devops import DevOpsAgent, DevOpsAgentInput
-from app.ai.agents.analytics import AnalyticsAgent, AnalyticsAgentInput
-from app.ai.agents.meeting import MeetingAgent, MeetingAgentInput
-from app.ai.agents.documentation import DocumentationAgent, DocumentationAgentInput
-from app.ai.agents.knowledge import KnowledgeAgent, KnowledgeAgentInput
-from app.ai.agents.review import ReviewAgent, ReviewAgentInput
-from app.ai.agents.estimation import EstimationAgent, EstimationAgentInput
-from app.ai.agents.risk import RiskAgent, RiskAgentInput
-from app.ai.agents.priority import PriorityAgent, PriorityAgentInput
+from app.ai.agents.CEO import CEOAgent
+from app.ai.agents.communication import AgentCommunicationBus
+from app.ai.agents.database_architect import DBArchitect
+from app.ai.agents.devops import DevOpsAgent
+from app.ai.agents.documentation import DocumentationAgent
+from app.ai.agents.estimation import EstimationAgent
+from app.ai.agents.frontend_architect import FrontendArchitect
+from app.ai.agents.knowledge import KnowledgeAgent
+from app.ai.agents.market_research import ResearchAgent
+from app.ai.agents.meeting import MeetingAgent
+from app.ai.agents.priority import PriorityAgent
+from app.ai.agents.product_manager import PMAgent
+from app.ai.agents.qa import QAAgent
+from app.ai.agents.review import ReviewAgent
+from app.ai.agents.risk import RiskAgent
+from app.ai.agents.roadmap import RoadmapAgent
+from app.ai.agents.security import SecurityAgent
+from app.ai.agents.sprint import SprintAgent
+from app.ai.agents.task import TaskAgent
+from app.ai.agents.technical_architect import TechArchitect
+from app.ai.agents.ux_designer import UXAgent
+from app.ai.core.llm_manager import LLMManager
+from app.ai.exceptions import AIException, ValidationException
+from app.ai.memory.memory_manager import (
+    ConversationMemory,
+    OrganizationMemory,
+    WorkspaceMemory,
+)
+from app.ai.prompts.prompt_manager import PromptManager
+from app.ai.registry.agent_registry import AgentRegistry
+from app.ai.schemas import (
+    AgentResponse,
+    AIRequest,
+    AIResponse,
+    StreamingToken,
+    TokenUsage,
+)
+from app.ai.telemetry.metrics import TelemetryRegistry
+from app.ai.tools.tool_framework import ToolRegistry
+from app.ai.utils.security import AISecurityManager
 
 logger = logging.getLogger("app.ai.orchestrator")
 
@@ -92,12 +103,30 @@ class AIOrchestrator:
     def _register_all_agents(self) -> None:
         """Instantiate and register every agent with shared infrastructure references."""
         agent_classes = [
-            CEOAgent, PMAgent, BAAgent, ResearchAgent, UXAgent,
-            TechArchitect, DBArchitect, APIArchitect, BackendArchitect,
-            FrontendArchitect, RoadmapAgent, SprintAgent, TaskAgent,
-            QAAgent, SecurityAgent, DevOpsAgent, AnalyticsAgent,
-            MeetingAgent, DocumentationAgent, KnowledgeAgent,
-            ReviewAgent, EstimationAgent, RiskAgent, PriorityAgent,
+            CEOAgent,
+            PMAgent,
+            BAAgent,
+            ResearchAgent,
+            UXAgent,
+            TechArchitect,
+            DBArchitect,
+            APIArchitect,
+            BackendArchitect,
+            FrontendArchitect,
+            RoadmapAgent,
+            SprintAgent,
+            TaskAgent,
+            QAAgent,
+            SecurityAgent,
+            DevOpsAgent,
+            AnalyticsAgent,
+            MeetingAgent,
+            DocumentationAgent,
+            KnowledgeAgent,
+            ReviewAgent,
+            EstimationAgent,
+            RiskAgent,
+            PriorityAgent,
         ]
 
         for agent_cls in agent_classes:
@@ -215,7 +244,9 @@ class AIOrchestrator:
         # 4. Prompt loading & interpolation
         prompt_name = req.prompt_name or "chat_assistant"
         try:
-            system_prompt = self.prompt_manager.interpolate(prompt_name, req.prompt_variables)
+            system_prompt = self.prompt_manager.interpolate(
+                prompt_name, req.prompt_variables
+            )
         except Exception:
             system_prompt = self.prompt_manager.get_prompt("chat_assistant").template
 
@@ -235,7 +266,9 @@ class AIOrchestrator:
 
         # 7. Execution through LLM routing gateway
         try:
-            logger.info(f"Orchestrator routing query to LLM. Provider: {provider}, Model: {model}")
+            logger.info(
+                f"Orchestrator routing query to LLM. Provider: {provider}, Model: {model}"
+            )
             res = await self.llm_manager.generate(
                 messages=messages,
                 provider=provider,
@@ -252,7 +285,7 @@ class AIOrchestrator:
                 [
                     {"role": "user", "content": sanitized_input},
                     {"role": "assistant", "content": masked_content},
-                ]
+                ],
             )
 
             # 9. Record Telemetry Metrics
@@ -281,7 +314,9 @@ class AIOrchestrator:
                 success=False,
             )
             logger.exception("AI request execution failed in orchestrator pipeline.")
-            raise AIException(message=f"Orchestrator failed to process execution: {str(e)}")
+            raise AIException(
+                message=f"Orchestrator failed to process execution: {str(e)}"
+            )
 
     async def execute_stream(self, req: AIRequest) -> AsyncIterator[StreamingToken]:
         """
@@ -295,7 +330,9 @@ class AIOrchestrator:
 
         prompt_name = req.prompt_name or "chat_assistant"
         try:
-            system_prompt = self.prompt_manager.interpolate(prompt_name, req.prompt_variables)
+            system_prompt = self.prompt_manager.interpolate(
+                prompt_name, req.prompt_variables
+            )
         except Exception:
             system_prompt = self.prompt_manager.get_prompt("chat_assistant").template
 

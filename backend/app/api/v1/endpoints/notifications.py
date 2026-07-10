@@ -1,12 +1,13 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_current_active_user, get_db
-from app.models.user import User
 from app.models.notification import Notification
+from app.models.user import User
 from app.repositories.notification import notification_repo
-from app.schemas.notification import NotificationResponse, NotificationUpdate
+from app.schemas.notification import NotificationResponse
 
 router = APIRouter()
 

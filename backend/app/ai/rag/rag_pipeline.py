@@ -7,9 +7,10 @@ Extends the existing rag_engine.py foundation.
 
 import logging
 from typing import Any
+
 from pydantic import BaseModel, Field
 
-from app.ai.rag.rag_engine import RAGRetriever, DocumentChunk
+from app.ai.rag.rag_engine import RAGRetriever
 
 logger = logging.getLogger("app.ai.rag.pipeline")
 
@@ -42,7 +43,9 @@ class RAGContextBuilder:
         Retrieve chunks, rank by relevance, and build a formatted context string
         with citation references.
         """
-        chunks = await self.retriever.retrieve(query, top_k=top_k, keyword_filter=keyword_filter)
+        chunks = await self.retriever.retrieve(
+            query, top_k=top_k, keyword_filter=keyword_filter
+        )
         if not chunks:
             return "", []
 
@@ -58,13 +61,15 @@ class RAGContextBuilder:
 
             ref_num = i + 1
             context_parts.append(f"[{ref_num}] {chunk.content}")
-            citations.append(Citation(
-                chunk_id=chunk.chunk_id,
-                document_id=chunk.document_id,
-                content_preview=chunk.content[:150],
-                relevance_score=1.0 - (i * 0.1),
-                metadata=chunk.metadata,
-            ))
+            citations.append(
+                Citation(
+                    chunk_id=chunk.chunk_id,
+                    document_id=chunk.document_id,
+                    content_preview=chunk.content[:150],
+                    relevance_score=1.0 - (i * 0.1),
+                    metadata=chunk.metadata,
+                )
+            )
             total_tokens += estimated_tokens
 
         context_text = "\n\n".join(context_parts)
@@ -77,18 +82,28 @@ class DocumentLoader:
     def __init__(self, retriever: RAGRetriever) -> None:
         self.retriever = retriever
 
-    async def load_text(self, document_id: str, text: str, metadata: dict[str, Any] | None = None) -> int:
+    async def load_text(
+        self, document_id: str, text: str, metadata: dict[str, Any] | None = None
+    ) -> int:
         """Load plain text document."""
         return await self.retriever.index_document(document_id, text, metadata=metadata)
 
-    async def load_markdown(self, document_id: str, markdown: str, metadata: dict[str, Any] | None = None) -> int:
+    async def load_markdown(
+        self, document_id: str, markdown: str, metadata: dict[str, Any] | None = None
+    ) -> int:
         """Load markdown document, splitting on headers for better chunks."""
         meta = {**(metadata or {}), "format": "markdown"}
         return await self.retriever.index_document(document_id, markdown, metadata=meta)
 
-    async def load_structured(self, document_id: str, data: dict[str, Any], metadata: dict[str, Any] | None = None) -> int:
+    async def load_structured(
+        self,
+        document_id: str,
+        data: dict[str, Any],
+        metadata: dict[str, Any] | None = None,
+    ) -> int:
         """Load structured JSON data by converting to text representation."""
         import json
+
         text = json.dumps(data, indent=2, default=str)
         meta = {**(metadata or {}), "format": "structured_json"}
         return await self.retriever.index_document(document_id, text, metadata=meta)

@@ -1,6 +1,9 @@
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.services.ai.providers.base import BaseAIProvider
 
 

@@ -1,16 +1,23 @@
-from typing import Any, Optional
-from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GoalBase(BaseModel):
     name: str = Field(..., description="Name of the goal")
-    description: Optional[str] = Field(None, description="Detailed description")
+    description: str | None = Field(None, description="Detailed description")
     type: str = Field(..., description="Business, Product, Technical, Sprint, Release")
-    status: Optional[str] = Field("Open", description="Open, In Progress, Achieved, Abandoned")
-    progress: Optional[float] = Field(0.0, description="Progress percentage from 0.0 to 100.0")
-    target_date: Optional[datetime] = Field(None, description="Target date for goal completion")
+    status: str | None = Field(
+        "Open", description="Open, In Progress, Achieved, Abandoned"
+    )
+    progress: float | None = Field(
+        0.0, description="Progress percentage from 0.0 to 100.0"
+    )
+    target_date: datetime | None = Field(
+        None, description="Target date for goal completion"
+    )
 
 
 class GoalCreate(GoalBase):
@@ -18,27 +25,27 @@ class GoalCreate(GoalBase):
 
 
 class GoalUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    type: Optional[str] = None
-    status: Optional[str] = None
-    progress: Optional[float] = None
-    target_date: Optional[datetime] = None
+    name: str | None = None
+    description: str | None = None
+    type: str | None = None
+    status: str | None = None
+    progress: float | None = None
+    target_date: datetime | None = None
 
 
 class GoalResponse(GoalBase):
     id: UUID
     workspace_id: UUID
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class MissionBase(BaseModel):
     title: str
-    description: Optional[str] = None
-    status: Optional[str] = "Planned"
+    description: str | None = None
+    status: str | None = "Planned"
     objectives: list[dict[str, Any]] = Field(default_factory=list)
     milestones: list[dict[str, Any]] = Field(default_factory=list)
     deliverables: list[dict[str, Any]] = Field(default_factory=list)
@@ -50,20 +57,20 @@ class MissionCreate(MissionBase):
 
 
 class MissionUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    objectives: Optional[list[dict[str, Any]]] = None
-    milestones: Optional[list[dict[str, Any]]] = None
-    deliverables: Optional[list[dict[str, Any]]] = None
-    execution_plan: Optional[dict[str, Any]] = None
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    objectives: list[dict[str, Any]] | None = None
+    milestones: list[dict[str, Any]] | None = None
+    deliverables: list[dict[str, Any]] | None = None
+    execution_plan: dict[str, Any] | None = None
 
 
 class MissionResponse(MissionBase):
     id: UUID
     workspace_id: UUID
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,38 +78,38 @@ class MissionResponse(MissionBase):
 class PlanningItemBase(BaseModel):
     type: str  # Epic, Feature, UserStory, Task, Subtask
     title: str
-    description: Optional[str] = None
-    status: Optional[str] = "Todo"
-    priority: Optional[str] = "Medium"
-    estimated_hours: Optional[float] = 0.0
+    description: str | None = None
+    status: str | None = "Todo"
+    priority: str | None = "Medium"
+    estimated_hours: float | None = 0.0
     assigned_roles: list[str] = Field(default_factory=list)
     metadata_fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlanningItemCreate(PlanningItemBase):
-    project_id: Optional[UUID] = None
-    parent_id: Optional[UUID] = None
+    project_id: UUID | None = None
+    parent_id: UUID | None = None
 
 
 class PlanningItemUpdate(BaseModel):
-    type: Optional[str] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    priority: Optional[str] = None
-    estimated_hours: Optional[float] = None
-    assigned_roles: Optional[list[str]] = None
-    metadata_fields: Optional[dict[str, Any]] = None
-    parent_id: Optional[UUID] = None
+    type: str | None = None
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    estimated_hours: float | None = None
+    assigned_roles: list[str] | None = None
+    metadata_fields: dict[str, Any] | None = None
+    parent_id: UUID | None = None
 
 
 class PlanningItemResponse(PlanningItemBase):
     id: UUID
     workspace_id: UUID
-    project_id: Optional[UUID] = None
-    parent_id: Optional[UUID] = None
+    project_id: UUID | None = None
+    parent_id: UUID | None = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -124,9 +131,9 @@ class DependencyResponse(DependencyCreate):
 class ExecutionQueueItemCreate(BaseModel):
     task_name: str
     payload: dict[str, Any] = Field(default_factory=dict)
-    priority: Optional[int] = 0
-    scheduled_at: Optional[datetime] = None
-    max_retries: Optional[int] = 3
+    priority: int | None = 0
+    scheduled_at: datetime | None = None
+    max_retries: int | None = 3
 
 
 class ExecutionQueueItemResponse(BaseModel):
@@ -139,8 +146,8 @@ class ExecutionQueueItemResponse(BaseModel):
     retry_count: int
     max_retries: int
     scheduled_at: datetime
-    run_at: Optional[datetime] = None
-    error_log: Optional[str] = None
+    run_at: datetime | None = None
+    error_log: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -167,7 +174,7 @@ class ScenarioSimulationResponse(BaseModel):
 
 
 class ResourceRequirementCreate(BaseModel):
-    epic_id: Optional[UUID] = None
+    epic_id: UUID | None = None
     developer_count: int = 0
     qa_count: int = 0
     designer_count: int = 0

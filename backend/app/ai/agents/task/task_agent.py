@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class TaskAgentInput(BaseModel):
-    sprint_backlog: str = Field(..., description="Selected backlog items from Sprint Agent")
+    sprint_backlog: str = Field(
+        ..., description="Selected backlog items from Sprint Agent"
+    )
 
 
 class TaskAgent(BaseAgent[TaskAgentInput, AgentResponse]):

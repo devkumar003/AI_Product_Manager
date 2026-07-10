@@ -1,44 +1,43 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from uuid import UUID
-from datetime import datetime
 
-from app.api.v1.deps import get_db, get_current_active_user
-from app.models.user import User
+from app.api.v1.deps import get_current_active_user, get_db
 from app.models.membership import Membership
-from app.services.development import (
-    development_engine,
-    code_planner,
-    quality_engine,
-    git_workflow,
-    dev_management,
-    dev_workspace,
-)
+from app.models.user import User
 from app.schemas.development import (
+    BugReportResponse,
+    CodePlanResponse,
+    CodeQualityScanResponse,
+    CodeReviewResponse,
+    DeploymentPlanCreate,
+    DeploymentPlanResponse,
+    DeveloperTaskAssignmentCreate,
+    DeveloperTaskAssignmentResponse,
+    DevelopmentAnalyticsResponse,
+    GitBranchCreate,
+    GitBranchResponse,
+    GitCommitCreate,
+    GitCommitResponse,
+    GitPullRequestCreate,
+    GitPullRequestResponse,
     PipelineExecutionRequest,
     PipelineExecutionResponse,
-    CodePlanResponse,
-    GeneratedCodeFileResponse,
-    CodeReviewResponse,
-    CodeQualityScanResponse,
-    RefactoringProposalResponse,
     RefactoringProposalCreate,
-    BugReportResponse,
-    GitBranchResponse,
-    GitBranchCreate,
-    GitCommitResponse,
-    GitCommitCreate,
-    GitPullRequestResponse,
-    GitPullRequestCreate,
-    ReleasePlanResponse,
+    RefactoringProposalResponse,
     ReleasePlanCreate,
-    DeploymentPlanResponse,
-    DeploymentPlanCreate,
-    SprintUpdateResponse,
+    ReleasePlanResponse,
     SprintUpdateCreate,
-    DeveloperTaskAssignmentResponse,
-    DeveloperTaskAssignmentCreate,
-    DevelopmentAnalyticsResponse,
+    SprintUpdateResponse,
+)
+from app.services.development import (
+    code_planner,
+    dev_management,
+    dev_workspace,
+    development_engine,
+    git_workflow,
+    quality_engine,
 )
 
 router = APIRouter()
@@ -48,14 +47,15 @@ def check_workspace_access(db: Session, user_id: UUID, workspace_id: UUID):
     """
     Unified inline access control checking workspace membership.
     """
-    membership = db.query(Membership).filter(
-        Membership.user_id == user_id,
-        Membership.workspace_id == workspace_id
-    ).first()
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == user_id, Membership.workspace_id == workspace_id)
+        .first()
+    )
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have access permissions for this workspace."
+            detail="User does not have access permissions for this workspace.",
         )
 
 
@@ -63,7 +63,9 @@ def check_workspace_access(db: Session, user_id: UUID, workspace_id: UUID):
 def execute_pipeline(
     req: PipelineExecutionRequest,
     workspace_id: UUID = Query(...),
-    pipeline_type: str = Query(...),  # prd, requirement, architecture, database, backend, frontend, api, unittest, integrationtest, documentation, plan
+    pipeline_type: str = Query(
+        ...
+    ),  # prd, requirement, architecture, database, backend, frontend, api, unittest, integrationtest, documentation, plan
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -76,17 +78,15 @@ def execute_pipeline(
             target_name=req.target_name,
             prompt=req.prompt,
             pipeline_type=pipeline_type,
-            options=req.options
+            options=req.options,
         )
         return PipelineExecutionResponse(
-            success=res["success"],
-            message=res["message"],
-            outputs=res
+            success=res["success"], message=res["message"], outputs=res
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Pipeline execution crashed: {str(e)}"
+            detail=f"Pipeline execution crashed: {str(e)}",
         )
 
 
@@ -171,7 +171,9 @@ def create_git_branch(
     current_user: User = Depends(get_current_active_user),
 ):
     check_workspace_access(db, current_user.id, workspace_id)
-    return git_workflow.create_branch(db, workspace_id, req.branch_name, req.source_branch)
+    return git_workflow.create_branch(
+        db, workspace_id, req.branch_name, req.source_branch
+    )
 
 
 @router.post("/git/commit", response_model=GitCommitResponse)
@@ -196,7 +198,12 @@ def create_pull_request(
 ):
     check_workspace_access(db, current_user.id, workspace_id)
     return git_workflow.generate_pull_request(
-        db, workspace_id, req.title, req.description or "", req.source_branch, req.target_branch
+        db,
+        workspace_id,
+        req.title,
+        req.description or "",
+        req.source_branch,
+        req.target_branch,
     )
 
 
@@ -211,8 +218,7 @@ def merge_pull_request(
     pr = git_workflow.merge_pull_request(db, workspace_id, pr_id)
     if not pr:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Pull Request not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail="Pull Request not found."
         )
     return pr
 
@@ -251,7 +257,9 @@ def create_sprint_update(
     current_user: User = Depends(get_current_active_user),
 ):
     check_workspace_access(db, current_user.id, workspace_id)
-    return dev_management.create_sprint_update(db, workspace_id, req.sprint_name, req.progress_summary or "")
+    return dev_management.create_sprint_update(
+        db, workspace_id, req.sprint_name, req.progress_summary or ""
+    )
 
 
 @router.post("/tasks/assign", response_model=DeveloperTaskAssignmentResponse)
@@ -263,7 +271,12 @@ def assign_developer_task(
 ):
     check_workspace_access(db, current_user.id, workspace_id)
     return dev_management.assign_developer_task(
-        db, workspace_id, req.developer_name, req.planning_item_id, req.assigned_role, req.allocated_hours
+        db,
+        workspace_id,
+        req.developer_name,
+        req.planning_item_id,
+        req.assigned_role,
+        req.allocated_hours,
     )
 
 
@@ -282,7 +295,7 @@ def get_development_analytics(
         bug_fix_ratio=metrics["bug_fix_ratio"],
         commits_count=metrics["commits_count"],
         pull_requests_count=metrics["pull_requests_count"],
-        active_branches=metrics["active_branches"]
+        active_branches=metrics["active_branches"],
     )
 
 
@@ -295,4 +308,6 @@ def run_workspace_sandbox_action(
     current_user: User = Depends(get_current_active_user),
 ):
     check_workspace_access(db, current_user.id, workspace_id)
-    return dev_workspace.execute_workspace_actions(db, workspace_id, file_path, action, {})
+    return dev_workspace.execute_workspace_actions(
+        db, workspace_id, file_path, action, {}
+    )

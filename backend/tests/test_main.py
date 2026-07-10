@@ -55,8 +55,11 @@ def test_exception_handler_middleware():
 def test_readiness_liveness_metrics():
     # Test readiness
     ready_res = client.get("/api/v1/ready")
-    assert ready_res.status_code in [200, 503] # Depending on if DB is actually connected in mock test
-    
+    assert ready_res.status_code in [
+        200,
+        503,
+    ]  # Depending on if DB is actually connected in mock test
+
     # Test liveness
     live_res = client.get("/api/v1/live")
     assert live_res.status_code == 200
@@ -72,4 +75,3 @@ def test_security_headers():
     response = client.get("/api/v1/health")
     assert response.headers.get("X-Frame-Options") == "DENY"
     assert response.headers.get("X-Content-Type-Options") == "nosniff"
-

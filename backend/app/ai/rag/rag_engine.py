@@ -9,16 +9,18 @@ Provider-independent RAG layer with:
 - Document indexing pipeline
 """
 
-import math
 import hashlib
 import logging
+import math
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("app.ai.rag")
 
 
 # ── Chunking ──
+
 
 class DocumentChunk(BaseModel):
     chunk_id: str
@@ -45,7 +47,9 @@ def chunk_text(
     while idx < len(words):
         end = min(idx + chunk_size, len(words))
         chunk_text_str = " ".join(words[idx:end])
-        chunk_id = hashlib.sha256(f"{document_id}:{chunk_num}".encode()).hexdigest()[:12]
+        chunk_id = hashlib.sha256(f"{document_id}:{chunk_num}".encode()).hexdigest()[
+            :12
+        ]
         chunks.append(
             DocumentChunk(
                 chunk_id=chunk_id,
@@ -62,6 +66,7 @@ def chunk_text(
 
 
 # ── Embedding Service Abstraction ──
+
 
 class BaseEmbeddingService:
     """Abstract embedding provider. Subclass for OpenAI, Gemini, local models."""
@@ -102,13 +107,16 @@ class LLMEmbeddingService(BaseEmbeddingService):
 
 # ── Vector Store Abstraction ──
 
+
 class BaseVectorStore:
     """Abstract vector store. Subclass for FAISS, ChromaDB, Pinecone, Qdrant, Milvus."""
 
     async def upsert(self, chunks: list[DocumentChunk]) -> int:
         raise NotImplementedError
 
-    async def search(self, query_embedding: list[float], top_k: int = 5) -> list[DocumentChunk]:
+    async def search(
+        self, query_embedding: list[float], top_k: int = 5
+    ) -> list[DocumentChunk]:
         raise NotImplementedError
 
     async def delete(self, document_id: str) -> int:
@@ -128,7 +136,9 @@ class InMemoryVectorStore(BaseVectorStore):
             self._store.append(chunk)
         return len(chunks)
 
-    async def search(self, query_embedding: list[float], top_k: int = 5) -> list[DocumentChunk]:
+    async def search(
+        self, query_embedding: list[float], top_k: int = 5
+    ) -> list[DocumentChunk]:
         scored = []
         for chunk in self._store:
             if not chunk.embedding:
@@ -155,6 +165,7 @@ class InMemoryVectorStore(BaseVectorStore):
 
 # ── RAG Retriever ──
 
+
 class RAGRetriever:
     """
     Hybrid retriever combining vector similarity search with keyword filtering.
@@ -176,7 +187,9 @@ class RAGRetriever:
         chunk_size: int = 512,
     ) -> int:
         """Chunk, embed, and store a document."""
-        chunks = chunk_text(content, document_id, chunk_size=chunk_size, metadata=metadata)
+        chunks = chunk_text(
+            content, document_id, chunk_size=chunk_size, metadata=metadata
+        )
         for chunk in chunks:
             chunk.embedding = await self.embedding_service.embed(chunk.content)
         return await self.vector_store.upsert(chunks)

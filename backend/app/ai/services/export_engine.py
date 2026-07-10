@@ -6,9 +6,9 @@ Markdown, JSON, CSV, HTML, and presentation-ready structures.
 PDF/DOCX generation is architecture-ready (requires optional dependencies).
 """
 
-import json
 import csv
 import io
+import json
 import logging
 from typing import Any
 
@@ -100,12 +100,22 @@ class ExportEngine:
             elif isinstance(value, list):
                 if value and isinstance(value[0], dict):
                     headers = list(value[0].keys())
-                    html.append("<table><tr>" + "".join(f"<th>{h}</th>" for h in headers) + "</tr>")
+                    html.append(
+                        "<table><tr>"
+                        + "".join(f"<th>{h}</th>" for h in headers)
+                        + "</tr>"
+                    )
                     for item in value:
-                        html.append("<tr>" + "".join(f"<td>{item.get(h, '')}</td>" for h in headers) + "</tr>")
+                        html.append(
+                            "<tr>"
+                            + "".join(f"<td>{item.get(h, '')}</td>" for h in headers)
+                            + "</tr>"
+                        )
                     html.append("</table>")
                 else:
-                    html.append("<ul>" + "".join(f"<li>{item}</li>" for item in value) + "</ul>")
+                    html.append(
+                        "<ul>" + "".join(f"<li>{item}</li>" for item in value) + "</ul>"
+                    )
             elif isinstance(value, dict):
                 html.append("<ul>")
                 for k, v in value.items():
@@ -120,9 +130,18 @@ class ExportEngine:
     # ── Presentation-Ready Structure ──
 
     @staticmethod
-    def to_presentation(data: dict[str, Any], title: str = "AI ProductOS") -> list[dict[str, Any]]:
+    def to_presentation(
+        data: dict[str, Any], title: str = "AI ProductOS"
+    ) -> list[dict[str, Any]]:
         """Convert to a slide-by-slide structure for rendering or export."""
-        slides = [{"slide": 1, "title": title, "content": "AI-Powered Product Intelligence", "type": "title"}]
+        slides = [
+            {
+                "slide": 1,
+                "title": title,
+                "content": "AI-Powered Product Intelligence",
+                "type": "title",
+            }
+        ]
         slide_num = 2
 
         for key, value in data.items():
@@ -130,18 +149,27 @@ class ExportEngine:
             if isinstance(value, str):
                 bullets = [value]
             elif isinstance(value, list):
-                bullets = [str(item) if not isinstance(item, dict) else item.get("title", str(item)) for item in value[:8]]
+                bullets = [
+                    (
+                        str(item)
+                        if not isinstance(item, dict)
+                        else item.get("title", str(item))
+                    )
+                    for item in value[:8]
+                ]
             elif isinstance(value, dict):
                 bullets = [f"{k}: {v}" for k, v in list(value.items())[:8]]
             else:
                 bullets = [str(value)]
 
-            slides.append({
-                "slide": slide_num,
-                "title": heading,
-                "bullets": bullets,
-                "type": "content",
-            })
+            slides.append(
+                {
+                    "slide": slide_num,
+                    "title": heading,
+                    "bullets": bullets,
+                    "type": "content",
+                }
+            )
             slide_num += 1
 
         return slides

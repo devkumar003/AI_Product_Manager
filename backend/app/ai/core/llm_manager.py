@@ -1,18 +1,19 @@
 import asyncio
 import logging
-from typing import Any, AsyncIterator
-from app.core.settings import settings
+from collections.abc import AsyncIterator
+
+from app.ai.exceptions import ProviderException
 from app.ai.providers import (
     BaseProvider,
-    OpenAIProvider,
-    GeminiProvider,
     ClaudeProvider,
-    GroqProvider,
     DeepSeekProvider,
+    GeminiProvider,
+    GroqProvider,
     OllamaProvider,
+    OpenAIProvider,
 )
 from app.ai.schemas import AIResponse, StreamingToken
-from app.ai.exceptions import ProviderException
+from app.core.settings import settings
 
 logger = logging.getLogger("app.ai.llm_manager")
 
@@ -33,7 +34,9 @@ class LLMManager:
             "claude": ClaudeProvider(api_key=settings.ANTHROPIC_API_KEY),
             "groq": GroqProvider(api_key=settings.GROQ_API_KEY),
             "deepseek": DeepSeekProvider(api_key=settings.DEEPSEEK_API_KEY),
-            "ollama": OllamaProvider(base_url=settings.OLLAMA_BASE_URL or "http://localhost:11434"),
+            "ollama": OllamaProvider(
+                base_url=settings.OLLAMA_BASE_URL or "http://localhost:11434"
+            ),
         }
 
     def _get_provider_priority(self, requested: str | None = None) -> list[str]:
@@ -75,15 +78,21 @@ class LLMManager:
                     if res.success:
                         return res
                     else:
-                        logger.warning(f"Provider {p_name} returned failure: {res.error_message}")
+                        logger.warning(
+                            f"Provider {p_name} returned failure: {res.error_message}"
+                        )
                         last_error = Exception(res.error_message)
                 except Exception as e:
-                    logger.warning(f"Error on {p_name} generate (attempt {attempt}): {str(e)}")
+                    logger.warning(
+                        f"Error on {p_name} generate (attempt {attempt}): {str(e)}"
+                    )
                     last_error = e
                     # Exponential backoff
-                    await asyncio.sleep(2 ** attempt)
+                    await asyncio.sleep(2**attempt)
 
-            logger.error(f"Provider {p_name} completely failed after {retry_count} retries. Falling back...")
+            logger.error(
+                f"Provider {p_name} completely failed after {retry_count} retries. Falling back..."
+            )
 
         raise ProviderException(
             message=f"All configured AI Providers failed to generate a response. Last error: {str(last_error)}",
@@ -122,10 +131,16 @@ class LLMManager:
                 fallback_provider = self.providers[fallback_name]
                 config["model"] = self._get_default_model(fallback_name)
                 try:
-                    async for token in fallback_provider.generate_stream(messages, config):
+                    async for token in fallback_provider.generate_stream(
+                        messages, config
+                    ):
                         yield token
                 except Exception as fe:
-                    yield StreamingToken(token="", done=True, error=f"Fallback streaming also failed: {str(fe)}")
+                    yield StreamingToken(
+                        token="",
+                        done=True,
+                        error=f"Fallback streaming also failed: {str(fe)}",
+                    )
             else:
                 yield StreamingToken(token="", done=True, error=str(e))
 

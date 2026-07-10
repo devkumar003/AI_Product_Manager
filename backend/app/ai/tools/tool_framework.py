@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Callable, Type
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -8,7 +9,9 @@ class BaseTool(abc.ABC):
     Abstract class for all tools available to LLM models during agent execution loops.
     """
 
-    def __init__(self, name: str, description: str, args_schema: Type[BaseModel]) -> None:
+    def __init__(
+        self, name: str, description: str, args_schema: type[BaseModel]
+    ) -> None:
         self.name = name
         self.description = description
         self.args_schema = args_schema
@@ -73,7 +76,9 @@ class ToolExecutor:
         try:
             validated_args = tool.args_schema(**raw_arguments)
         except Exception as e:
-            raise ValueError(f"Arguments validation failed for tool '{tool_name}': {str(e)}")
+            raise ValueError(
+                f"Arguments validation failed for tool '{tool_name}': {str(e)}"
+            )
 
         try:
             return await tool.execute(**validated_args.model_dump())
@@ -84,6 +89,7 @@ class ToolExecutor:
 # -------------------------------------------------------------
 # Interface descriptors for future tools (TASK 9 requirements)
 # -------------------------------------------------------------
+
 
 class WebSearchArgs(BaseModel):
     query: str = Field(..., description="The query to search the web for")
@@ -102,7 +108,9 @@ class WebSearchTool(BaseTool):
 
 
 class DatabaseArgs(BaseModel):
-    query: str = Field(..., description="SQL query to execute against the PostgreSQL database")
+    query: str = Field(
+        ..., description="SQL query to execute against the PostgreSQL database"
+    )
 
 
 class DatabaseTool(BaseTool):
@@ -114,11 +122,15 @@ class DatabaseTool(BaseTool):
         )
 
     async def execute(self, query: str) -> Any:
-        raise NotImplementedError("Database query tool execution is not implemented yet.")
+        raise NotImplementedError(
+            "Database query tool execution is not implemented yet."
+        )
 
 
 class CalculatorArgs(BaseModel):
-    expression: str = Field(..., description="Math expression to calculate, e.g. '2 + 2 * 7'")
+    expression: str = Field(
+        ..., description="Math expression to calculate, e.g. '2 + 2 * 7'"
+    )
 
 
 class CalculatorTool(BaseTool):

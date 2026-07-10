@@ -8,6 +8,7 @@ relationships, versioning, loading, and search.
 import hashlib
 import time
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -24,7 +25,9 @@ class KnowledgeDocument(BaseModel):
     related_doc_ids: list[str] = Field(default_factory=list)
 
     def compute_id(self) -> str:
-        return hashlib.sha256(f"{self.title}:{self.content[:200]}".encode()).hexdigest()[:16]
+        return hashlib.sha256(
+            f"{self.title}:{self.content[:200]}".encode()
+        ).hexdigest()[:16]
 
 
 class KnowledgeCollection(BaseModel):
@@ -46,7 +49,9 @@ class KnowledgeBase:
 
     # ── Collection Management ──
 
-    def create_collection(self, name: str, description: str = "") -> KnowledgeCollection:
+    def create_collection(
+        self, name: str, description: str = ""
+    ) -> KnowledgeCollection:
         if name in self._collections:
             return self._collections[name]
         col = KnowledgeCollection(name=name, description=description)
@@ -78,7 +83,9 @@ class KnowledgeBase:
         col.tags.update(doc.tags)
         return doc
 
-    def get_document(self, collection_name: str, doc_id: str) -> KnowledgeDocument | None:
+    def get_document(
+        self, collection_name: str, doc_id: str
+    ) -> KnowledgeDocument | None:
         col = self._collections.get(collection_name)
         if not col:
             return None
@@ -134,7 +141,10 @@ class KnowledgeBase:
                     continue
                 if tags and not set(tags).intersection(doc.tags):
                     continue
-                if query_lower in doc.title.lower() or query_lower in doc.content.lower():
+                if (
+                    query_lower in doc.title.lower()
+                    or query_lower in doc.content.lower()
+                ):
                     results.append(doc)
 
         return results[:limit]

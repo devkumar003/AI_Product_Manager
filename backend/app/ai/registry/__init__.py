@@ -1,4 +1,4 @@
-from app.ai.registry.agent_registry import AgentRegistry, AgentMetadata
+from app.ai.registry.agent_registry import AgentMetadata, AgentRegistry
 
 __all__ = [
     "AgentRegistry",

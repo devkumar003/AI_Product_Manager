@@ -5,14 +5,17 @@ Task 9 — API Generator
 """
 
 from typing import Any
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 
 # ── Task 7: Architecture Generator ──
 
+
 class ArchitectureInput(BaseModel):
     requirements: str = Field(..., description="Requirements and technical context")
-    technology_preferences: str = Field(default="", description="Any tech stack preferences")
+    technology_preferences: str = Field(
+        default="", description="Any tech stack preferences"
+    )
 
 
 class ArchitectureOutput(BaseModel):
@@ -38,9 +41,12 @@ ARCHITECTURE_PROMPT = (
 
 # ── Task 8: Database Generator ──
 
+
 class DatabaseInput(BaseModel):
     architecture: str = Field(..., description="Architecture output for schema design")
-    requirements: str = Field(default="", description="Requirements for entity extraction")
+    requirements: str = Field(
+        default="", description="Requirements for entity extraction"
+    )
 
 
 class DatabaseOutput(BaseModel):
@@ -66,8 +72,11 @@ DATABASE_PROMPT = (
 
 # ── Task 9: API Generator ──
 
+
 class APIInput(BaseModel):
-    database_schema: str = Field(..., description="Database schema for endpoint derivation")
+    database_schema: str = Field(
+        ..., description="Database schema for endpoint derivation"
+    )
     architecture: str = Field(default="", description="Architecture context")
 
 

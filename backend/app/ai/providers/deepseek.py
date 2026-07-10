@@ -1,4 +1,6 @@
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 from app.ai.providers.openai import OpenAIProvider
 from app.ai.schemas import AIResponse, StreamingToken
 
@@ -29,4 +31,6 @@ class DeepSeekProvider(OpenAIProvider):
         self, prompt_tokens: int, completion_tokens: int, model: str
     ) -> float:
         # DeepSeek pricing: $0.14 / M input tokens, $0.28 / M output tokens
-        return (prompt_tokens * 0.14 / 1_000_000) + (completion_tokens * 0.28 / 1_000_000)
+        return (prompt_tokens * 0.14 / 1_000_000) + (
+            completion_tokens * 0.28 / 1_000_000
+        )

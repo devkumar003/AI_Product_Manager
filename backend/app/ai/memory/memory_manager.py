@@ -86,7 +86,9 @@ class ConversationMemory(BaseMemory):
         user_queries = [t["content"] for t in compress_turns if t["role"] == "user"]
         summary = f"Summary of early exchange: User discussed details concerning: {', '.join(user_queries[:3])}."
 
-        compressed = [{"role": "system", "content": f"[Conversation Summary] {summary}"}]
+        compressed = [
+            {"role": "system", "content": f"[Conversation Summary] {summary}"}
+        ]
         compressed.extend(keep_turns)
 
         self._store[key] = compressed
@@ -110,7 +112,9 @@ class WorkspaceMemory(BaseMemory):
         if not settings:
             return []
         context_str = ", ".join(f"{k}: {v}" for k, v in settings.items())
-        return [{"role": "system", "content": f"[Workspace Setting Context] {context_str}"}]
+        return [
+            {"role": "system", "content": f"[Workspace Setting Context] {context_str}"}
+        ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
         if key not in self._store:
@@ -139,7 +143,7 @@ class OrganizationMemory(BaseMemory):
         return [
             {
                 "role": "system",
-                "content": f"[Organization Brand Standards]\n" + "\n".join(lines),
+                "content": "[Organization Brand Standards]\n" + "\n".join(lines),
             }
         ]
 

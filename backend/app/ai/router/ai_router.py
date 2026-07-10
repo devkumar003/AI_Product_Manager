@@ -552,4 +552,3 @@ async def get_ai_token_usage_summary(
         )
 
     return ai_usage_service.get_workspace_usage_summary(db, ws_uuid)
-

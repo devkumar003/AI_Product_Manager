@@ -1,24 +1,24 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import (
-    auth,
-    health,
-    invitations,
-    organizations,
-    users,
-    workspaces,
-    projects,
-    documents,
-    notifications,
-    activities,
-    search,
-    planning,
-    integration,
-    development,
-    executive,
-    websockets,
-)
 from app.ai.router import router as ai_router
+from app.api.v1.endpoints import (
+    activities,
+    auth,
+    development,
+    documents,
+    executive,
+    health,
+    integration,
+    invitations,
+    notifications,
+    organizations,
+    planning,
+    projects,
+    search,
+    users,
+    websockets,
+    workspaces,
+)
 
 api_router = APIRouter()
 api_router.include_router(health.router, tags=["health"])
@@ -33,12 +33,18 @@ api_router.include_router(
 )
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
-api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(
+    notifications.router, prefix="/notifications", tags=["notifications"]
+)
 api_router.include_router(activities.router, prefix="/activities", tags=["activities"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(ai_router, prefix="/ai", tags=["ai"])
 api_router.include_router(planning.router, prefix="/planning", tags=["planning"])
-api_router.include_router(integration.router, prefix="/integration", tags=["integration"])
-api_router.include_router(development.router, prefix="/development", tags=["development"])
+api_router.include_router(
+    integration.router, prefix="/integration", tags=["integration"]
+)
+api_router.include_router(
+    development.router, prefix="/development", tags=["development"]
+)
 api_router.include_router(executive.router, prefix="/executive", tags=["executive"])
 api_router.include_router(websockets.router, tags=["websockets"])

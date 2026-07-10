@@ -1,9 +1,7 @@
-import json
 from unittest.mock import AsyncMock, patch
-import pytest
-
 
 from app.ai.schemas import AIResponse, TokenUsage
+
 
 async def mock_llm_generate(*args, **kwargs):
     return AIResponse(
@@ -12,7 +10,7 @@ async def mock_llm_generate(*args, **kwargs):
         provider="openai",
         usage=TokenUsage(),
         latency_ms=0.0,
-        success=True
+        success=True,
     )
 
 
@@ -54,7 +52,11 @@ def test_ai_endpoints_workflow(mock_generate, client, db):
     # 3. Create workspace
     workspace_res = client.post(
         f"/api/v1/workspaces/?org_id={org_id}",
-        json={"name": "AI R&D Space", "description": "workspace for ai agents testing", "visibility": "private"},
+        json={
+            "name": "AI R&D Space",
+            "description": "workspace for ai agents testing",
+            "visibility": "private",
+        },
         headers=headers,
     )
     assert workspace_res.status_code == 201

@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
-from app.main import app
+
 from app.ai.schemas import AIResponse, TokenUsage
 
 
@@ -51,12 +52,14 @@ async def mock_llm_generate(*args, **kwargs):
         provider="openai",
         usage=TokenUsage(),
         latency_ms=0.0,
-        success=True
+        success=True,
     )
 
 
 @patch("app.ai.core.llm_manager.LLMManager.generate", new_callable=AsyncMock)
-def test_goal_crud_workflow(mock_generate, client: TestClient, auth_headers: dict, workspace_id: str):
+def test_goal_crud_workflow(
+    mock_generate, client: TestClient, auth_headers: dict, workspace_id: str
+):
     # 1. Create Goal
     res = client.post(
         f"/api/v1/planning/goals?workspace_id={workspace_id}",
@@ -98,7 +101,9 @@ def test_goal_crud_workflow(mock_generate, client: TestClient, auth_headers: dic
 
 
 @patch("app.ai.core.llm_manager.LLMManager.generate", new_callable=AsyncMock)
-def test_backlog_and_scheduler_workflow(mock_generate, client: TestClient, auth_headers: dict, workspace_id: str):
+def test_backlog_and_scheduler_workflow(
+    mock_generate, client: TestClient, auth_headers: dict, workspace_id: str
+):
     mock_generate.side_effect = mock_llm_generate
 
     # 1. Generate Backlog from vision
@@ -120,7 +125,9 @@ def test_backlog_and_scheduler_workflow(mock_generate, client: TestClient, auth_
 
 
 @patch("app.ai.core.llm_manager.LLMManager.generate", new_callable=AsyncMock)
-def test_simulations_and_resource_planner(mock_generate, client: TestClient, auth_headers: dict, workspace_id: str):
+def test_simulations_and_resource_planner(
+    mock_generate, client: TestClient, auth_headers: dict, workspace_id: str
+):
     # Mock return for simulation
     mock_generate.return_value = AIResponse(
         content='{"best_case_timeline": {"duration_weeks": 4}, "worst_case_timeline": {"duration_weeks": 12}, "average_case_timeline": {"duration_weeks": 7}, "budget_impact": {}, "timeline_impact": {}}',
@@ -128,7 +135,7 @@ def test_simulations_and_resource_planner(mock_generate, client: TestClient, aut
         provider="openai",
         usage=TokenUsage(),
         latency_ms=0.0,
-        success=True
+        success=True,
     )
 
     # 1. Run simulation
@@ -141,7 +148,9 @@ def test_simulations_and_resource_planner(mock_generate, client: TestClient, aut
     assert "best_case_timeline" in res_sim.json()
 
 
-def test_templates_and_roadmap(client: TestClient, auth_headers: dict, workspace_id: str):
+def test_templates_and_roadmap(
+    client: TestClient, auth_headers: dict, workspace_id: str
+):
     # 1. Get Templates
     res_t = client.get(
         "/api/v1/planning/intelligence/templates",

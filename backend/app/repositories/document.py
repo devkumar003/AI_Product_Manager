@@ -1,6 +1,7 @@
 import hashlib
 import uuid
-from sqlalchemy import or_, JSON, cast
+
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.document import Document
@@ -164,7 +165,9 @@ class DocumentRepository(BaseRepository[Document]):
                 )
             )
 
-        return query.order_by(self.model.created_at.desc()).offset(skip).limit(limit).all()
+        return (
+            query.order_by(self.model.created_at.desc()).offset(skip).limit(limit).all()
+        )
 
 
 document_repo = DocumentRepository(Document)

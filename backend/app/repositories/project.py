@@ -1,4 +1,5 @@
 import uuid
+
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -7,7 +8,9 @@ from app.repositories.base import BaseRepository
 
 
 class ProjectRepository(BaseRepository[Project]):
-    def get_by_slug(self, db: Session, *, workspace_id: uuid.UUID, slug: str) -> Project | None:
+    def get_by_slug(
+        self, db: Session, *, workspace_id: uuid.UUID, slug: str
+    ) -> Project | None:
         return (
             db.query(self.model)
             .filter(
@@ -62,7 +65,9 @@ class ProjectRepository(BaseRepository[Project]):
 
         return query.offset(skip).limit(limit).all()
 
-    def duplicate(self, db: Session, *, project_id: uuid.UUID, owner_id: uuid.UUID | None = None) -> Project | None:
+    def duplicate(
+        self, db: Session, *, project_id: uuid.UUID, owner_id: uuid.UUID | None = None
+    ) -> Project | None:
         original = self.get(db, project_id)
         if not original:
             return None

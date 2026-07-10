@@ -1,4 +1,3 @@
-import json
 import logging
 from uuid import UUID
 
@@ -54,7 +53,9 @@ class MissionPlanner:
         ]
 
         try:
-            data = await generate_with_json_healing(self.llm, prompt, {"temperature": 0.3})
+            data = await generate_with_json_healing(
+                self.llm, prompt, {"temperature": 0.3}
+            )
         except Exception as e:
             logger.error(f"Failed to generate or parse mission plan JSON: {str(e)}")
             # Fallback mock schema

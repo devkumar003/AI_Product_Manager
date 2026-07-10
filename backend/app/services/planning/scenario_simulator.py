@@ -1,4 +1,3 @@
-import json
 import logging
 from uuid import UUID
 
@@ -67,7 +66,9 @@ class ScenarioSimulator:
         ]
 
         try:
-            data = await generate_with_json_healing(self.llm, prompt, {"temperature": 0.4})
+            data = await generate_with_json_healing(
+                self.llm, prompt, {"temperature": 0.4}
+            )
         except Exception as e:
             logger.error(
                 f"Failed to generate or parse scenario simulation JSON: {str(e)}"

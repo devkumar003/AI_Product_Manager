@@ -1,8 +1,6 @@
 import abc
 import os
-import shutil
 from pathlib import Path
-from app.core.settings import settings
 
 
 class BaseStorage(abc.ABC):
@@ -41,11 +39,11 @@ class LocalStorage(BaseStorage):
         # Prevent path traversal attacks
         safe_name = Path(filename).name
         target_path = self.upload_dir / safe_name
-        
+
         # Write binary
         with open(target_path, "wb") as f:
             f.write(file_data)
-            
+
         return safe_name
 
     def read(self, filename: str) -> bytes:
@@ -67,6 +65,7 @@ class S3Storage(BaseStorage):
     """
     Placeholder/Future S3 driver that complies with the BaseStorage interface.
     """
+
     def __init__(self):
         self.bucket = os.getenv("AWS_S3_BUCKET", "ai-product-os")
 

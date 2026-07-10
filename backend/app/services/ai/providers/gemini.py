@@ -1,6 +1,9 @@
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.services.ai.providers.base import BaseAIProvider
 
 
@@ -32,6 +35,7 @@ class GeminiProvider(BaseAIProvider):
     ) -> str:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 return "Simulated Gemini LLM response content for development and testing verification."
             raise ValueError("Gemini API key is not configured.")
@@ -63,6 +67,7 @@ class GeminiProvider(BaseAIProvider):
     ) -> AsyncIterator[str]:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 yield "Simulated Gemini stream chunk"
                 return

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 

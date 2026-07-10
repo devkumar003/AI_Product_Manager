@@ -1,24 +1,33 @@
 import io
 import json
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_current_active_user, get_db, require_workspace_permission
+from app.api.v1.deps import (
+    get_current_active_user,
+    get_db,
+    require_workspace_permission,
+)
 from app.core.permissions import Permission
-from app.models.user import User
 from app.models.document import Document
 from app.models.membership import Membership
-from app.repositories.document import document_repo
+from app.models.user import User
 from app.repositories.activity import activity_repo
+from app.repositories.document import document_repo
 from app.schemas.document import DocumentResponse, DocumentUpdate
 from app.services.storage import storage_service
 
 router = APIRouter()
 
 
-@router.post("/{workspace_id}", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{workspace_id}",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def upload_document(
     workspace_id: UUID,
     file: UploadFile = File(...),
@@ -28,7 +37,9 @@ async def upload_document(
     tags_json: str = Form("[]"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Document:
     # 1. Parse tags and project_id UUID
     try:
@@ -93,7 +104,9 @@ def list_documents(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ) -> list[Document]:
     return document_repo.get_multi_by_workspace(
         db,
@@ -112,7 +125,9 @@ def get_document(
     workspace_id: UUID,
     document_id: UUID,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ) -> Document:
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:
@@ -128,7 +143,9 @@ def download_document(
     workspace_id: UUID,
     document_id: UUID,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ):
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:
@@ -159,7 +176,9 @@ def update_document(
     doc_in: DocumentUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Document:
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:
@@ -189,7 +208,9 @@ async def upload_new_version(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Document:
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:
@@ -205,7 +226,9 @@ async def upload_new_version(
             detail="Cannot upload an empty file version",
         )
 
-    updated = document_repo.add_version(db, db_obj=doc, file_bytes=file_bytes, created_by_id=current_user.id)
+    updated = document_repo.add_version(
+        db, db_obj=doc, file_bytes=file_bytes, created_by_id=current_user.id
+    )
 
     activity_repo.log(
         db,
@@ -219,14 +242,19 @@ async def upload_new_version(
     return updated
 
 
-@router.post("/{workspace_id}/{document_id}/version/{version_number}/restore", response_model=DocumentResponse)
+@router.post(
+    "/{workspace_id}/{document_id}/version/{version_number}/restore",
+    response_model=DocumentResponse,
+)
 def restore_document_version(
     workspace_id: UUID,
     document_id: UUID,
     version_number: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Document:
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:
@@ -235,7 +263,9 @@ def restore_document_version(
             detail="Document not found",
         )
 
-    restored = document_repo.restore_version(db, db_obj=doc, version_number=version_number, created_by_id=current_user.id)
+    restored = document_repo.restore_version(
+        db, db_obj=doc, version_number=version_number, created_by_id=current_user.id
+    )
     if not restored:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -260,7 +290,9 @@ def delete_document(
     document_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_DELETE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_DELETE)
+    ),
 ) -> Document:
     doc = document_repo.get(db, document_id)
     if not doc or doc.workspace_id != workspace_id:

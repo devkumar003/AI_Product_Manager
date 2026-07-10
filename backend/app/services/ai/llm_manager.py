@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import threading
-from typing import Any, AsyncIterator
-from app.core.settings import settings
+from collections.abc import AsyncIterator
+from typing import Any
+
 from app.ai.core.llm_manager import LLMManager as CoreLLMManager
+from app.core.settings import settings
 
 logger = logging.getLogger("app.services.ai.llm_manager")
 
@@ -12,6 +14,7 @@ class LLMResponse(str):
     """
     Backward-compatible string subclass that exposes a .content property.
     """
+
     def __new__(cls, content: str):
         return super().__new__(cls, content)
 
@@ -70,10 +73,14 @@ class LLMManager:
             p_name = provider.lower()
             if p_name in self.core_manager.providers:
                 return p_name
-            logger.warning(f"Unknown provider '{provider}' requested. Falling back to auto-detection.")
+            logger.warning(
+                f"Unknown provider '{provider}' requested. Falling back to auto-detection."
+            )
 
         m_lower = model.lower()
-        if m_lower.startswith(("gpt-", "o1", "o3", "ft:gpt", "dall-e", "text-embedding")):
+        if m_lower.startswith(
+            ("gpt-", "o1", "o3", "ft:gpt", "dall-e", "text-embedding")
+        ):
             if not settings.OPENAI_API_KEY and settings.GEMINI_API_KEY:
                 return "gemini"
             return "openai"
@@ -85,7 +92,12 @@ class LLMManager:
             return "deepseek"
         elif m_lower.startswith(("groq/", "llama3", "mixtral", "gemma")):
             return "groq"
-        elif "llama" in m_lower or "mistral" in m_lower or "phi" in m_lower or m_lower.startswith("ollama/"):
+        elif (
+            "llama" in m_lower
+            or "mistral" in m_lower
+            or "phi" in m_lower
+            or m_lower.startswith("ollama/")
+        ):
             return "ollama"
         else:
             if not settings.OPENAI_API_KEY and settings.GEMINI_API_KEY:
@@ -109,13 +121,13 @@ class LLMManager:
         config = kwargs.pop("config", None)
         if config:
             if hasattr(config, "model"):
-                model = getattr(config, "model") or model
+                model = config.model or model
             if hasattr(config, "provider"):
-                provider = getattr(config, "provider") or provider
+                provider = config.provider or provider
             if hasattr(config, "temperature"):
-                temperature = getattr(config, "temperature") or temperature
+                temperature = config.temperature or temperature
             if hasattr(config, "max_tokens"):
-                max_tokens = getattr(config, "max_tokens") or max_tokens
+                max_tokens = config.max_tokens or max_tokens
 
         if messages is None:
             messages = []

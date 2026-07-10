@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class ReviewAgentInput(BaseModel):
-    agent_outputs: str = Field(..., description="JSON string of all prior agent outputs to review")
+    agent_outputs: str = Field(
+        ..., description="JSON string of all prior agent outputs to review"
+    )
 
 
 class ReviewAgent(BaseAgent[ReviewAgentInput, AgentResponse]):

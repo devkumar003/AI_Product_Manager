@@ -1,13 +1,18 @@
-from typing import Any
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class CEOAgentInput(BaseModel):
     idea: str = Field(..., description="The seed product idea or business concept")
-    target_audience: str = Field(default="General Developers / Enterprises", description="Primary targeted audience")
-    monetization: str = Field(default="SaaS Subscription", description="Proposed revenue model")
+    target_audience: str = Field(
+        default="General Developers / Enterprises",
+        description="Primary targeted audience",
+    )
+    monetization: str = Field(
+        default="SaaS Subscription", description="Proposed revenue model"
+    )
 
 
 class CEOAgent(BaseAgent[CEOAgentInput, AgentResponse]):

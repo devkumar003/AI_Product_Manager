@@ -1,7 +1,10 @@
 import asyncio
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.services.ai.providers.base import BaseAIProvider
 
 
@@ -19,6 +22,7 @@ class OpenAIProvider(BaseAIProvider):
     ) -> str:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 response_format = config.get("response_format")
                 if response_format and response_format.get("type") == "json_object":
@@ -53,6 +57,7 @@ class OpenAIProvider(BaseAIProvider):
     ) -> AsyncIterator[str]:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 simulated_text = (
                     "Simulated live streaming response from AI ProductOS Autonomous Agent.\n\n"

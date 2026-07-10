@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class EstimationAgentInput(BaseModel):
-    task_breakdown: str = Field(..., description="Task breakdown from the Task Generator Agent")
+    task_breakdown: str = Field(
+        ..., description="Task breakdown from the Task Generator Agent"
+    )
     team_size: int = Field(default=5, description="Number of developers available")
 
 

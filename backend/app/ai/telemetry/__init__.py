@@ -1,4 +1,4 @@
-from app.ai.telemetry.metrics import TelemetryRegistry, ServiceMetrics
+from app.ai.telemetry.metrics import ServiceMetrics, TelemetryRegistry
 
 __all__ = [
     "TelemetryRegistry",

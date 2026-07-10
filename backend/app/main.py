@@ -8,8 +8,8 @@ from app.api.v1.router import api_router
 from app.core.logging_config import setup_logging
 from app.core.settings import settings
 from app.database.session import engine
-from app.models import Base
 from app.middleware.exception_handler import GlobalExceptionMiddleware
+from app.models import Base
 
 # Setup structured logging before anything else
 setup_logging()
@@ -23,16 +23,17 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info("Ensuring database tables are initialized...")
     Base.metadata.create_all(bind=engine)
-    
+
     # Seed default integration plugins
     from app.database.session import SessionLocal
     from app.services.integration.plugin_manager import plugin_manager
+
     db = SessionLocal()
     try:
         plugin_manager.seed_default_plugins(db)
     finally:
         db.close()
-        
+
     yield
     # Shutdown tasks
     logger.info("Shutting down AI ProductOS Backend Service...")
@@ -48,7 +49,8 @@ app = FastAPI(
 )
 
 from fastapi.middleware.gzip import GZipMiddleware
-from app.middleware.security import SecurityHeadersMiddleware, RateLimitingMiddleware
+
+from app.middleware.security import RateLimitingMiddleware, SecurityHeadersMiddleware
 
 # CORS configuration
 if settings.BACKEND_CORS_ORIGINS:
@@ -87,5 +89,5 @@ def get_root_health():
 
 # Mount AI Observability endpoints
 from app.ai.telemetry.observability import health_router as ai_health_router
-app.include_router(ai_health_router, prefix="/api/v1/ai", tags=["ai-observability"])
 
+app.include_router(ai_health_router, prefix="/api/v1/ai", tags=["ai-observability"])

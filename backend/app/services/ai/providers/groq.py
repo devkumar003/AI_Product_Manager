@@ -1,4 +1,6 @@
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 from app.services.ai.providers.openai import OpenAIProvider
 
 

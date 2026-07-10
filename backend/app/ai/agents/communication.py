@@ -10,6 +10,7 @@ Provides:
 
 import logging
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 from app.ai.schemas import AgentResponse
@@ -19,10 +20,15 @@ logger = logging.getLogger("app.ai.agents.communication")
 
 class AgentMessage(BaseModel):
     """A message sent between agents through the communication bus."""
+
     source_agent: str = Field(..., description="Name of the sending agent")
     target_agent: str = Field(..., description="Name of the receiving agent")
-    payload: dict[str, Any] = Field(default_factory=dict, description="Structured data payload")
-    message_type: str = Field(default="output_handoff", description="Type: output_handoff, query, feedback")
+    payload: dict[str, Any] = Field(
+        default_factory=dict, description="Structured data payload"
+    )
+    message_type: str = Field(
+        default="output_handoff", description="Type: output_handoff, query, feedback"
+    )
 
 
 class SharedContext(BaseModel):
@@ -31,6 +37,7 @@ class SharedContext(BaseModel):
     Every agent reads from and writes to this context so downstream agents
     have access to all prior agent outputs without direct coupling.
     """
+
     workspace_id: str
     user_id: str
     idea: str = ""
@@ -87,7 +94,9 @@ class AgentCommunicationBus:
         """Retrieve all pending messages addressed to a specific agent."""
         targeted = [m for m in self._message_queue if m.target_agent == agent_name]
         # Remove consumed messages from the queue
-        self._message_queue = [m for m in self._message_queue if m.target_agent != agent_name]
+        self._message_queue = [
+            m for m in self._message_queue if m.target_agent != agent_name
+        ]
         return targeted
 
     def broadcast(self, source_agent: str, payload: dict[str, Any]) -> None:

@@ -5,10 +5,11 @@ Task 16 — Risk Analysis Engine
 """
 
 from typing import Any
+
 from pydantic import BaseModel, Field
 
-
 # ── Task 14: Cost Estimation Engine ──
+
 
 class CostEstimationInput(BaseModel):
     task_breakdown: str = Field(..., description="Task breakdown with estimates")
@@ -41,6 +42,7 @@ COST_ESTIMATION_PROMPT = (
 
 # ── Task 15: Timeline Prediction Engine ──
 
+
 class TimelineInput(BaseModel):
     task_breakdown: str = Field(..., description="Task breakdown data")
     team_size: int = Field(default=5)
@@ -66,6 +68,7 @@ TIMELINE_PROMPT = (
 
 
 # ── Task 16: Risk Analysis Engine ──
+
 
 class RiskAnalysisInput(BaseModel):
     project_context: str = Field(..., description="Combined project context")

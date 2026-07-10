@@ -78,7 +78,9 @@ class DependencyEngine:
 
         detected_deps = []
         try:
-            data = await generate_with_json_healing(self.llm, prompt, {"temperature": 0.2})
+            data = await generate_with_json_healing(
+                self.llm, prompt, {"temperature": 0.2}
+            )
             detected_deps = data.get("dependencies", [])
         except Exception as e:
             logger.error(f"Failed to detect dependencies via LLM: {str(e)}")

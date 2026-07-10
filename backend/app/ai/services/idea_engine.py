@@ -7,15 +7,16 @@ Converts a raw natural-language product idea into structured intelligence:
 industry classification, validation scores, and product discovery artifacts.
 """
 
-from typing import Any
 from pydantic import BaseModel, Field
-
 
 # ── Task 1: Idea Analysis ──
 
+
 class IdeaAnalysisInput(BaseModel):
     idea: str = Field(..., description="Natural language product idea")
-    additional_context: str = Field(default="", description="Optional context or constraints")
+    additional_context: str = Field(
+        default="", description="Optional context or constraints"
+    )
 
 
 class IdeaAnalysisOutput(BaseModel):
@@ -46,23 +47,32 @@ IDEA_ANALYSIS_PROMPT = (
 
 # ── Task 2: Idea Validation ──
 
+
 class IdeaValidationInput(BaseModel):
     idea: str = Field(..., description="Product idea to validate")
-    analysis_summary: str = Field(default="", description="Prior analysis context if available")
+    analysis_summary: str = Field(
+        default="", description="Prior analysis context if available"
+    )
 
 
 class IdeaValidationOutput(BaseModel):
     market_demand: str = Field(..., description="Assessment of market demand")
     innovation_score: float = Field(..., ge=0.0, le=10.0)
     feasibility_score: float = Field(..., ge=0.0, le=10.0)
-    technical_complexity: str = Field(..., description="low / medium / high / very_high")
+    technical_complexity: str = Field(
+        ..., description="low / medium / high / very_high"
+    )
     business_complexity: str = Field(..., description="low / medium / high / very_high")
     competition_score: float = Field(..., ge=0.0, le=10.0)
-    estimated_development_cost_usd: str = Field(..., description="Range estimate e.g. $50k-$150k")
+    estimated_development_cost_usd: str = Field(
+        ..., description="Range estimate e.g. $50k-$150k"
+    )
     estimated_timeline: str = Field(..., description="e.g. 3-6 months")
     risk_score: float = Field(..., ge=0.0, le=10.0)
     success_probability: float = Field(..., ge=0.0, le=1.0)
-    recommendation: str = Field(..., description="Go / No-Go / Pivot recommendation with rationale")
+    recommendation: str = Field(
+        ..., description="Go / No-Go / Pivot recommendation with rationale"
+    )
 
 
 IDEA_VALIDATION_PROMPT = (
@@ -75,9 +85,12 @@ IDEA_VALIDATION_PROMPT = (
 
 # ── Task 3: Product Discovery ──
 
+
 class ProductDiscoveryInput(BaseModel):
     idea: str = Field(..., description="Product idea")
-    validation_summary: str = Field(default="", description="Validation results if available")
+    validation_summary: str = Field(
+        default="", description="Validation results if available"
+    )
 
 
 class UserPersona(BaseModel):

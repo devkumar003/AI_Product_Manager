@@ -1,11 +1,17 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class PriorityAgentInput(BaseModel):
-    features_list: str = Field(..., description="List of features with descriptions to prioritize")
-    framework: str = Field(default="RICE", description="Prioritization framework: MoSCoW, RICE, ICE, or value_vs_effort")
+    features_list: str = Field(
+        ..., description="List of features with descriptions to prioritize"
+    )
+    framework: str = Field(
+        default="RICE",
+        description="Prioritization framework: MoSCoW, RICE, ICE, or value_vs_effort",
+    )
 
 
 class PriorityAgent(BaseAgent[PriorityAgentInput, AgentResponse]):

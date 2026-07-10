@@ -1,6 +1,8 @@
 from uuid import UUID
-from sqlalchemy.orm import Session
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.models.ai_token_usage import AITokenUsage
 
 # Approximate cost per 1K tokens in USD
@@ -17,7 +19,9 @@ COST_TABLE_USD_PER_1K = {
 class AIUsageService:
     @staticmethod
     def calculate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
-        rates = COST_TABLE_USD_PER_1K.get(model.lower(), COST_TABLE_USD_PER_1K["default"])
+        rates = COST_TABLE_USD_PER_1K.get(
+            model.lower(), COST_TABLE_USD_PER_1K["default"]
+        )
         prompt_cost = (prompt_tokens / 1000.0) * rates["prompt"]
         comp_cost = (completion_tokens / 1000.0) * rates["completion"]
         return round(prompt_cost + comp_cost, 6)

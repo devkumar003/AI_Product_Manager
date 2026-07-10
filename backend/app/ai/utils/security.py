@@ -1,5 +1,6 @@
-import re
 import logging
+import re
+
 from app.ai.exceptions import PromptInjectionException
 
 logger = logging.getLogger("app.ai.security")
@@ -31,7 +32,9 @@ class AISecurityManager:
     @classmethod
     def sanitize_input(cls, text: str) -> str:
         """Wipes potentially unsafe HTML/script blocks and cleans double escapes."""
-        cleaned = re.sub(r"<script.*?>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        cleaned = re.sub(
+            r"<script.*?>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE
+        )
         # Strips out HTML elements generally to ensure raw text
         cleaned = re.sub(r"<[^>]*>", "", cleaned)
         return cleaned.strip()
@@ -64,6 +67,7 @@ class AISecurityManager:
         Token bucket rate limiter. Returns True if request is allowed, False if blocked.
         """
         import time
+
         now = time.time()
         window = 60.0
         if workspace_id not in cls._rate_buckets:
@@ -108,4 +112,3 @@ class AISecurityManager:
             if re.search(pattern, text, re.IGNORECASE):
                 return False
         return True
-

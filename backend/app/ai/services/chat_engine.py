@@ -9,19 +9,22 @@ Full-featured chat engine with:
 - Markdown/code block support (handled by frontend rendering)
 """
 
-import time
-import json
 import logging
-from typing import Any, AsyncIterator
+import time
+from collections.abc import AsyncIterator
 
 from app.ai.core.llm_manager import LLMManager
-from app.ai.memory.memory_manager import ConversationMemory, WorkspaceMemory, OrganizationMemory
-from app.ai.memory.enhanced_memory import ProjectMemory, LongTermMemory, MemoryRetriever
 from app.ai.knowledge.knowledge_base import KnowledgeBase
+from app.ai.memory.enhanced_memory import LongTermMemory, MemoryRetriever, ProjectMemory
+from app.ai.memory.memory_manager import (
+    ConversationMemory,
+    OrganizationMemory,
+    WorkspaceMemory,
+)
 from app.ai.rag.rag_engine import RAGRetriever
-from app.ai.utils.security import AISecurityManager
-from app.ai.schemas import StreamingToken, AIResponse, TokenUsage
+from app.ai.schemas import AIResponse, StreamingToken
 from app.ai.telemetry.metrics import TelemetryRegistry
+from app.ai.utils.security import AISecurityManager
 
 logger = logging.getLogger("app.ai.chat_engine")
 
@@ -131,7 +134,9 @@ class ChatEngine:
         AISecurityManager.verify_prompt_injection(message)
         sanitized = AISecurityManager.sanitize_input(message)
 
-        messages = await self._build_messages(workspace_id, user_id, project_id, sanitized)
+        messages = await self._build_messages(
+            workspace_id, user_id, project_id, sanitized
+        )
 
         async for token in self.llm.stream(
             messages=messages,
@@ -181,7 +186,9 @@ class ChatEngine:
             try:
                 docs = self.knowledge_base.search(user_message, limit=3)
                 if docs:
-                    kb_text = "\n".join(f"[KB:{d.category}] {d.content[:300]}" for d in docs)
+                    kb_text = "\n".join(
+                        f"[KB:{d.category}] {d.content[:300]}" for d in docs
+                    )
                     messages.append({"role": "system", "content": kb_text})
             except Exception as e:
                 logger.warning(f"Knowledge base search failed: {e}")

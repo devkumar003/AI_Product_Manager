@@ -1,5 +1,3 @@
-import json
-from uuid import UUID
 
 
 def test_projects_and_documents_workflow(client, db):
@@ -36,7 +34,11 @@ def test_projects_and_documents_workflow(client, db):
     # 3. Create workspace
     workspace_res = client.post(
         f"/api/v1/workspaces/?org_id={org_id}",
-        json={"name": "Sprint Space", "description": "workspace for sprints", "visibility": "private"},
+        json={
+            "name": "Sprint Space",
+            "description": "workspace for sprints",
+            "visibility": "private",
+        },
         headers=headers,
     )
     assert workspace_res.status_code == 201
@@ -46,7 +48,12 @@ def test_projects_and_documents_workflow(client, db):
     # Create Project
     project_res = client.post(
         f"/api/v1/projects/{workspace_id}",
-        json={"name": "AI Content Writer", "description": "GPT integration", "slug": "ai-writer", "priority": "High"},
+        json={
+            "name": "AI Content Writer",
+            "description": "GPT integration",
+            "slug": "ai-writer",
+            "priority": "High",
+        },
         headers=headers,
     )
     assert project_res.status_code == 201
@@ -106,7 +113,13 @@ def test_projects_and_documents_workflow(client, db):
 
     # 5. Document Management tests
     # Upload Document
-    files = {"file": ("requirements.txt", b"Initial product spec bytes content", "text/plain")}
+    files = {
+        "file": (
+            "requirements.txt",
+            b"Initial product spec bytes content",
+            "text/plain",
+        )
+    }
     data = {
         "name": "PRD Spec",
         "project_id": project_id,
@@ -132,12 +145,20 @@ def test_projects_and_documents_workflow(client, db):
     assert len(doc_list.json()) >= 1
 
     # Download Document
-    download_res = client.get(f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers)
+    download_res = client.get(
+        f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers
+    )
     assert download_res.status_code == 200
     assert download_res.content == b"Initial product spec bytes content"
 
     # Upload New Version
-    new_version_files = {"file": ("requirements_v2.txt", b"Second revision spec bytes content", "text/plain")}
+    new_version_files = {
+        "file": (
+            "requirements_v2.txt",
+            b"Second revision spec bytes content",
+            "text/plain",
+        )
+    }
     version_res = client.post(
         f"/api/v1/documents/{workspace_id}/{doc_id}/version",
         files=new_version_files,
@@ -147,7 +168,9 @@ def test_projects_and_documents_workflow(client, db):
     assert version_res.json()["current_version_number"] == 2
 
     # Download New Version and confirm updated content
-    download_v2_res = client.get(f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers)
+    download_v2_res = client.get(
+        f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers
+    )
     assert download_v2_res.status_code == 200
     assert download_v2_res.content == b"Second revision spec bytes content"
 
@@ -157,15 +180,21 @@ def test_projects_and_documents_workflow(client, db):
         headers=headers,
     )
     assert restore_v1_res.status_code == 200
-    assert restore_v1_res.json()["current_version_number"] == 3 # incremented to new active version
+    assert (
+        restore_v1_res.json()["current_version_number"] == 3
+    )  # incremented to new active version
 
     # Download restored and confirm matching version 1 bytes
-    download_restored = client.get(f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers)
+    download_restored = client.get(
+        f"/api/v1/documents/{workspace_id}/{doc_id}/download", headers=headers
+    )
     assert download_restored.status_code == 200
     assert download_restored.content == b"Initial product spec bytes content"
 
     # 6. Global Search tests
-    search_res = client.get(f"/api/v1/search/?q=Content&workspace_id={workspace_id}", headers=headers)
+    search_res = client.get(
+        f"/api/v1/search/?q=Content&workspace_id={workspace_id}", headers=headers
+    )
     assert search_res.status_code == 200
     results = search_res.json()
     assert len(results["projects"]) >= 1
@@ -175,6 +204,7 @@ def test_projects_and_documents_workflow(client, db):
     # Trigger a mock notification directly to test notification center list/reads
     from app.models.notification import Notification
     from app.models.user import User
+
     db_user = db.query(User).filter_by(email="mwp@example.com").first()
     db_notif = Notification(
         user_id=db_user.id,
@@ -197,7 +227,9 @@ def test_projects_and_documents_workflow(client, db):
     assert read_res.json()["read"] is True
 
     # Mark Archive
-    archive_notif = client.post(f"/api/v1/notifications/{notif_id}/archive", headers=headers)
+    archive_notif = client.post(
+        f"/api/v1/notifications/{notif_id}/archive", headers=headers
+    )
     assert archive_notif.status_code == 200
     assert archive_notif.json()["archived"] is True
 

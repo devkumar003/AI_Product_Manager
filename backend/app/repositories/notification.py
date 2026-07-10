@@ -1,4 +1,5 @@
 import uuid
+
 from sqlalchemy.orm import Session
 
 from app.models.notification import Notification
@@ -27,7 +28,9 @@ class NotificationRepository(BaseRepository[Notification]):
         if not include_archived:
             query = query.filter(self.model.archived == False)
 
-        return query.order_by(self.model.created_at.desc()).offset(skip).limit(limit).all()
+        return (
+            query.order_by(self.model.created_at.desc()).offset(skip).limit(limit).all()
+        )
 
     def mark_all_read(self, db: Session, *, user_id: uuid.UUID) -> int:
         count = (

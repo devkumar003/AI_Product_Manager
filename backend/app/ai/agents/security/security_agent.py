@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class SecurityAgentInput(BaseModel):
-    architecture_overview: str = Field(..., description="Details of tech stack and design decisions")
+    architecture_overview: str = Field(
+        ..., description="Details of tech stack and design decisions"
+    )
 
 
 class SecurityAgent(BaseAgent[SecurityAgentInput, AgentResponse]):

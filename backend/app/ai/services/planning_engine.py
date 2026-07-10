@@ -6,10 +6,11 @@ Task 13 — Feature Prioritization Engine
 """
 
 from typing import Any
+
 from pydantic import BaseModel, Field
 
-
 # ── Task 10: Roadmap Generator ──
+
 
 class RoadmapInput(BaseModel):
     features: str = Field(..., description="Feature list with priorities")
@@ -36,6 +37,7 @@ ROADMAP_PROMPT = (
 
 # ── Task 11: Sprint Generator ──
 
+
 class SprintInput(BaseModel):
     roadmap: str = Field(..., description="Roadmap data for sprint decomposition")
     team_size: int = Field(default=5)
@@ -61,6 +63,7 @@ SPRINT_PROMPT = (
 
 
 # ── Task 12: Task Breakdown Engine ──
+
 
 class TaskBreakdownInput(BaseModel):
     sprint_data: str = Field(..., description="Sprint planning data")
@@ -97,9 +100,12 @@ TASK_BREAKDOWN_PROMPT = (
 
 # ── Task 13: Feature Prioritization Engine ──
 
+
 class PrioritizationInput(BaseModel):
     features: str = Field(..., description="Feature list to prioritize")
-    framework: str = Field(default="RICE", description="MoSCoW, RICE, ICE, WSJF, value_vs_effort")
+    framework: str = Field(
+        default="RICE", description="MoSCoW, RICE, ICE, WSJF, value_vs_effort"
+    )
 
 
 class PrioritizedFeature(BaseModel):

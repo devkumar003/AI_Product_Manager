@@ -1,27 +1,38 @@
 import uuid
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_current_active_user, get_db, require_workspace_permission
+from app.api.v1.deps import (
+    get_current_active_user,
+    get_db,
+    require_workspace_permission,
+)
 from app.core.permissions import Permission
-from app.models.user import User
-from app.models.project import Project
 from app.models.membership import Membership
-from app.repositories.project import project_repo
+from app.models.project import Project
+from app.models.user import User
 from app.repositories.activity import activity_repo
+from app.repositories.project import project_repo
 from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 
 router = APIRouter()
 
 
-@router.post("/{workspace_id}", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{workspace_id}",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_project(
     workspace_id: UUID,
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Project:
     # 1. Check slug uniqueness in workspace
     slug = project_in.slug
@@ -29,7 +40,7 @@ def create_project(
         slug = project_in.name.lower().replace(" ", "-").replace("/", "-")
         # sanitize
         slug = "".join(c for c in slug if c.isalnum() or c == "-")
-        
+
     existing = project_repo.get_by_slug(db, workspace_id=workspace_id, slug=slug)
     if existing:
         # Append unique prefix/suffix to slug
@@ -72,7 +83,9 @@ def list_projects(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ) -> list[Project]:
     return project_repo.get_multi_by_workspace(
         db,
@@ -90,7 +103,9 @@ def get_project(
     workspace_id: UUID,
     project_id: UUID,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ) -> Project:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -108,7 +123,9 @@ def update_project(
     project_in: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Project:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -119,7 +136,9 @@ def update_project(
 
     # If slug is changing, verify unique slug
     if project_in.slug and project_in.slug != project.slug:
-        existing = project_repo.get_by_slug(db, workspace_id=workspace_id, slug=project_in.slug)
+        existing = project_repo.get_by_slug(
+            db, workspace_id=workspace_id, slug=project_in.slug
+        )
         if existing and existing.id != project_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -146,7 +165,9 @@ def delete_project(
     project_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_DELETE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_DELETE)
+    ),
 ) -> Project:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -174,7 +195,9 @@ def archive_project(
     project_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Project:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -207,9 +230,15 @@ def restore_project(
     project_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Project:
-    project = db.query(Project).filter(Project.id == project_id, Project.workspace_id == workspace_id).first()
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.workspace_id == workspace_id)
+        .first()
+    )
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -241,7 +270,9 @@ def duplicate_project(
     project_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_WRITE)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
 ) -> Project:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -250,7 +281,9 @@ def duplicate_project(
             detail="Project not found in this workspace",
         )
 
-    duplicated = project_repo.duplicate(db, project_id=project_id, owner_id=current_user.id)
+    duplicated = project_repo.duplicate(
+        db, project_id=project_id, owner_id=current_user.id
+    )
     if not duplicated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -274,7 +307,9 @@ def get_project_dashboard(
     workspace_id: UUID,
     project_id: UUID,
     db: Session = Depends(get_db),
-    membership: Membership = Depends(require_workspace_permission(Permission.WORKSPACE_READ)),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
 ) -> dict:
     project = project_repo.get(db, project_id)
     if not project or project.workspace_id != workspace_id:
@@ -285,12 +320,13 @@ def get_project_dashboard(
 
     # 1. Fetch recent activity related to project
     from app.models.activity import Activity
+
     activities = (
         db.query(Activity)
         .filter(
             Activity.workspace_id == workspace_id,
             Activity.entity_type == "project",
-            Activity.entity_id == project_id
+            Activity.entity_id == project_id,
         )
         .order_by(Activity.created_at.desc())
         .limit(10)
@@ -299,12 +335,10 @@ def get_project_dashboard(
 
     # 2. Fetch documents linked to project
     from app.models.document import Document
+
     documents = (
         db.query(Document)
-        .filter(
-            Document.project_id == project_id,
-            Document.deleted_at.is_(None)
-        )
+        .filter(Document.project_id == project_id, Document.deleted_at.is_(None))
         .order_by(Document.updated_at.desc())
         .limit(10)
         .all()
@@ -347,5 +381,5 @@ def get_project_dashboard(
         "stats": {
             "document_count": total_docs,
             "storage_used_bytes": total_bytes,
-        }
+        },
     }

@@ -1,7 +1,8 @@
 import asyncio
 import json
 import logging
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
+
 from app.ai.schemas import StreamingToken
 
 logger = logging.getLogger("app.ai.streaming_engine")
@@ -28,8 +29,10 @@ class StreamingEngine:
                 # Wrap next token retrieval with timeout limit
                 try:
                     token_task = asyncio.create_task(token_iterator.__anext__())
-                    token = await asyncio.wait_for(token_task, timeout=self.token_timeout)
-                except asyncio.TimeoutError:
+                    token = await asyncio.wait_for(
+                        token_task, timeout=self.token_timeout
+                    )
+                except TimeoutError:
                     logger.error("Streaming token delivery timed out.")
                     yield f"data: {json.dumps({'error': 'Token delivery timeout', 'done': True})}\n\n"
                     break
@@ -51,7 +54,9 @@ class StreamingEngine:
                     break
 
         except asyncio.CancelledError:
-            logger.info("Streaming client disconnected. Cancelling upstream generator tasks.")
+            logger.info(
+                "Streaming client disconnected. Cancelling upstream generator tasks."
+            )
             # Yield connection-cut event to inform telemetry/routing
             yield f"data: {json.dumps({'error': 'Client disconnected', 'done': True})}\n\n"
             raise

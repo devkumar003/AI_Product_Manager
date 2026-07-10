@@ -1,5 +1,6 @@
 import logging
 from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from app.services.integration.plugin_manager import plugin_manager
@@ -24,20 +25,26 @@ class OAuthManager:
         "teams": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={client_id}&response_type=code&redirect_uri={redirect_uri}&scope=Group.ReadWrite.All,Chat.ReadWrite",
     }
 
-    def get_authorize_url(self, provider: str, client_id: str, redirect_uri: str) -> str:
+    def get_authorize_url(
+        self, provider: str, client_id: str, redirect_uri: str
+    ) -> str:
         """Returns the authorization URL for a specific provider."""
         provider_key = provider.lower()
         if provider_key not in self.AUTH_URLS:
             # Fallback URL if unknown
             return f"https://example.com/oauth/{provider_key}?client_id={client_id}&redirect_uri={redirect_uri}"
-        
+
         return self.AUTH_URLS[provider_key].format(
-            client_id=client_id,
-            redirect_uri=redirect_uri
+            client_id=client_id, redirect_uri=redirect_uri
         )
 
     def exchange_code_for_tokens(
-        self, db: Session, workspace_id: UUID, provider: str, code: str, redirect_uri: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        provider: str,
+        code: str,
+        redirect_uri: str,
     ) -> dict:
         """Exchanges authorization code for credentials and securely stores them."""
         provider_key = provider.lower()
@@ -50,8 +57,12 @@ class OAuthManager:
         mock_refresh_token = f"mock_{provider_key}_refresh_token_val_67890"
 
         # Securely encrypt and save the credentials in the Secret Vault
-        secret_vault.store_secret(db, workspace_id, f"{provider_key}_access_token", mock_access_token)
-        secret_vault.store_secret(db, workspace_id, f"{provider_key}_refresh_token", mock_refresh_token)
+        secret_vault.store_secret(
+            db, workspace_id, f"{provider_key}_access_token", mock_access_token
+        )
+        secret_vault.store_secret(
+            db, workspace_id, f"{provider_key}_refresh_token", mock_refresh_token
+        )
 
         # Get or create the Connection in the DB
         plugin = plugin_manager.get_plugin_by_slug(db, provider_key)
@@ -59,25 +70,32 @@ class OAuthManager:
             # Seed if missing
             plugin_manager.seed_default_plugins(db)
             plugin = plugin_manager.get_plugin_by_slug(db, provider_key)
-        
+
         if plugin:
             plugin_manager.create_connection(
-                db, 
-                workspace_id, 
-                plugin.id, 
-                config={"connected_at": "now", "account": f"connected_{provider_key}_user"}
+                db,
+                workspace_id,
+                plugin.id,
+                config={
+                    "connected_at": "now",
+                    "account": f"connected_{provider_key}_user",
+                },
             )
 
         return {
             "access_token": mock_access_token,
             "refresh_token": mock_refresh_token,
             "provider": provider_key,
-            "status": "connected"
+            "status": "connected",
         }
 
-    def get_access_token(self, db: Session, workspace_id: UUID, provider: str) -> str | None:
+    def get_access_token(
+        self, db: Session, workspace_id: UUID, provider: str
+    ) -> str | None:
         """Retrieves active access token from vault."""
-        return secret_vault.get_secret(db, workspace_id, f"{provider.lower()}_access_token")
+        return secret_vault.get_secret(
+            db, workspace_id, f"{provider.lower()}_access_token"
+        )
 
 
 oauth_manager = OAuthManager()

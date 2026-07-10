@@ -1,22 +1,23 @@
+from datetime import datetime
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from uuid import UUID
-from datetime import datetime
 
-from app.api.v1.deps import get_db, get_current_active_user
-from app.models.user import User
+from app.api.v1.deps import get_current_active_user, get_db
 from app.models.membership import Membership
-from app.services.executive.ceo import ceo_service
-from app.services.executive.cto import cto_service
-from app.services.executive.coo import coo_service
+from app.models.user import User
 from app.schemas.executive import (
     CEOGenerationRequest,
     CEOReportResponse,
-    CTOGenerationRequest,
-    CTOReportResponse,
     COOGenerationRequest,
     COOReportResponse,
+    CTOGenerationRequest,
+    CTOReportResponse,
 )
+from app.services.executive.ceo import ceo_service
+from app.services.executive.coo import coo_service
+from app.services.executive.cto import cto_service
 
 router = APIRouter()
 
@@ -25,14 +26,15 @@ def check_workspace_access(db: Session, user_id: UUID, workspace_id: UUID):
     """
     Checks workspace membership for the user.
     """
-    membership = db.query(Membership).filter(
-        Membership.user_id == user_id,
-        Membership.workspace_id == workspace_id
-    ).first()
+    membership = (
+        db.query(Membership)
+        .filter(Membership.user_id == user_id, Membership.workspace_id == workspace_id)
+        .first()
+    )
     if not membership:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User does not have access permissions for this workspace."
+            detail="User does not have access permissions for this workspace.",
         )
 
 
@@ -51,12 +53,12 @@ def generate_ceo_report(
             product_idea=req.product_idea,
             target_industry=req.target_industry or "Tech",
             competitors=req.competitors,
-            budget=req.budget or 100000.0
+            budget=req.budget or 100000.0,
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate CEO report: {str(e)}"
+            detail=f"Failed to generate CEO report: {str(e)}",
         )
 
 
@@ -84,12 +86,12 @@ def generate_cto_report(
             workspace_id=workspace_id,
             product_spec=req.product_spec,
             preferred_cloud=req.preferred_cloud or "AWS",
-            compliance_needs=req.compliance_needs
+            compliance_needs=req.compliance_needs,
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate CTO report: {str(e)}"
+            detail=f"Failed to generate CTO report: {str(e)}",
         )
 
 
@@ -117,12 +119,12 @@ def generate_coo_report(
             workspace_id=workspace_id,
             sprint_name=req.sprint_name,
             team_members=req.team_members,
-            total_budget=req.total_budget or 50000.0
+            total_budget=req.total_budget or 50000.0,
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate COO report: {str(e)}"
+            detail=f"Failed to generate COO report: {str(e)}",
         )
 
 
@@ -151,7 +153,7 @@ def export_pdf_report(
     return {
         "success": True,
         "message": f"Successfully compiled and generated PDF export for {report_type} report: {report_id}.",
-        "download_url": f"/api/v1/executive/download/pdf/{report_id}"
+        "download_url": f"/api/v1/executive/download/pdf/{report_id}",
     }
 
 
@@ -170,7 +172,7 @@ def export_ppt_report(
     return {
         "success": True,
         "message": f"Successfully compiled and generated PPT slides deck export for {report_type} report: {report_id}.",
-        "download_url": f"/api/v1/executive/download/ppt/{report_id}"
+        "download_url": f"/api/v1/executive/download/ppt/{report_id}",
     }
 
 
@@ -183,9 +185,11 @@ def download_pdf_report(
     """
     Serve the generated PDF report content (simulated format).
     """
-    from app.models.executive import CEOReport, CTOReport, COOReport
-    from fastapi.responses import StreamingResponse
     import io
+
+    from fastapi.responses import StreamingResponse
+
+    from app.models.executive import CEOReport, COOReport, CTOReport
 
     ceo = db.query(CEOReport).filter(CEOReport.id == report_id).first()
     title = "Executive Advisor Report"
@@ -193,13 +197,19 @@ def download_pdf_report(
     if ceo:
         title = ceo.title
         content += f"Active Idea: {ceo.portfolio_data.get('active_idea', '')}\n"
-        content += f"Target Vertical: {ceo.portfolio_data.get('target_vertical', '')}\n\n"
+        content += (
+            f"Target Vertical: {ceo.portfolio_data.get('target_vertical', '')}\n\n"
+        )
         content += "SWOT Analysis:\n"
         content += f"{ceo.strategy_data.get('swot', {}).get('swot_markdown', '')}\n\n"
         content += "PESTLE Analysis:\n"
-        content += f"{ceo.strategy_data.get('pestle', {}).get('pestle_markdown', '')}\n\n"
+        content += (
+            f"{ceo.strategy_data.get('pestle', {}).get('pestle_markdown', '')}\n\n"
+        )
         content += "Financial Forecast:\n"
-        content += f"{ceo.financials.get('forecast', {}).get('forecast_markdown', '')}\n\n"
+        content += (
+            f"{ceo.financials.get('forecast', {}).get('forecast_markdown', '')}\n\n"
+        )
     else:
         cto = db.query(CTOReport).filter(CTOReport.id == report_id).first()
         if cto:
@@ -214,7 +224,9 @@ def download_pdf_report(
             coo = db.query(COOReport).filter(COOReport.id == report_id).first()
             if coo:
                 title = coo.title
-                content += f"Sprint Name: {coo.operations_data.get('sprint_name', '')}\n"
+                content += (
+                    f"Sprint Name: {coo.operations_data.get('sprint_name', '')}\n"
+                )
                 content += "Sprint Backlog & Tasks:\n"
                 content += f"{coo.operations_data.get('tasks_markdown', '')}\n\n"
                 content += "Team Resources:\n"
@@ -222,18 +234,18 @@ def download_pdf_report(
             else:
                 raise HTTPException(status_code=404, detail="Report not found")
 
-    file_data = f"===========================================\n"
+    file_data = "===========================================\n"
     file_data += f"{title.upper()}\n"
-    file_data += f"===========================================\n\n"
+    file_data += "===========================================\n\n"
     file_data += content
     file_data += f"\nGenerated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-    
+
     buf = io.BytesIO(file_data.encode("utf-8"))
     filename = f"{title.replace(' ', '_').lower()}.txt"
     return StreamingResponse(
         buf,
         media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
@@ -246,9 +258,11 @@ def download_ppt_report(
     """
     Serve the generated PPT slides report content (simulated format).
     """
-    from app.models.executive import CEOReport, CTOReport, COOReport
-    from fastapi.responses import StreamingResponse
     import io
+
+    from fastapi.responses import StreamingResponse
+
+    from app.models.executive import CEOReport, COOReport, CTOReport
 
     ceo = db.query(CEOReport).filter(CEOReport.id == report_id).first()
     title = "Executive Presentation"
@@ -256,43 +270,73 @@ def download_ppt_report(
     if ceo:
         title = ceo.title
         slides = [
-            ("Slide 1: Title", f"Executive Presentation: {ceo.title}\nActive Idea: {ceo.portfolio_data.get('active_idea', '')}"),
-            ("Slide 2: SWOT Analysis", f"{ceo.strategy_data.get('swot', {}).get('swot_markdown', '')}"),
-            ("Slide 3: PESTLE Analysis", f"{ceo.strategy_data.get('pestle', {}).get('pestle_markdown', '')}"),
-            ("Slide 4: Financial Forecast & Budget", f"Initial Budget: ${ceo.financials.get('initial_budget', 0)}\nForecast Details: {ceo.financials.get('forecast', {}).get('forecast_markdown', '')}"),
+            (
+                "Slide 1: Title",
+                f"Executive Presentation: {ceo.title}\nActive Idea: {ceo.portfolio_data.get('active_idea', '')}",
+            ),
+            (
+                "Slide 2: SWOT Analysis",
+                f"{ceo.strategy_data.get('swot', {}).get('swot_markdown', '')}",
+            ),
+            (
+                "Slide 3: PESTLE Analysis",
+                f"{ceo.strategy_data.get('pestle', {}).get('pestle_markdown', '')}",
+            ),
+            (
+                "Slide 4: Financial Forecast & Budget",
+                f"Initial Budget: ${ceo.financials.get('initial_budget', 0)}\nForecast Details: {ceo.financials.get('forecast', {}).get('forecast_markdown', '')}",
+            ),
         ]
     else:
         cto = db.query(CTOReport).filter(CTOReport.id == report_id).first()
         if cto:
             title = cto.title
             slides = [
-                ("Slide 1: Architecture Overview", f"Technical Specifications for: {cto.title}"),
-                ("Slide 2: System Design & Strategy", f"{cto.architecture_data.get('design_markdown', '')}"),
-                ("Slide 3: API & Schema Specs", f"{cto.spec_data.get('api_markdown', '')}"),
+                (
+                    "Slide 1: Architecture Overview",
+                    f"Technical Specifications for: {cto.title}",
+                ),
+                (
+                    "Slide 2: System Design & Strategy",
+                    f"{cto.architecture_data.get('design_markdown', '')}",
+                ),
+                (
+                    "Slide 3: API & Schema Specs",
+                    f"{cto.spec_data.get('api_markdown', '')}",
+                ),
             ]
         else:
             coo = db.query(COOReport).filter(COOReport.id == report_id).first()
             if coo:
                 title = coo.title
                 slides = [
-                    ("Slide 1: Operations Backlog", f"Project Backlog and Sprint for: {coo.title}"),
-                    ("Slide 2: Sprint Board Status", f"{coo.operations_data.get('tasks_markdown', '')}"),
-                    ("Slide 3: Team Resource Allocation", f"{coo.resource_data.get('team_members', '')}"),
+                    (
+                        "Slide 1: Operations Backlog",
+                        f"Project Backlog and Sprint for: {coo.title}",
+                    ),
+                    (
+                        "Slide 2: Sprint Board Status",
+                        f"{coo.operations_data.get('tasks_markdown', '')}",
+                    ),
+                    (
+                        "Slide 3: Team Resource Allocation",
+                        f"{coo.resource_data.get('team_members', '')}",
+                    ),
                 ]
             else:
                 raise HTTPException(status_code=404, detail="Report not found")
 
-    file_data = f"===========================================\n"
+    file_data = "===========================================\n"
     file_data += f"{title.upper()} - PRESENTATION DECK SLIDES\n"
-    file_data += f"===========================================\n\n"
+    file_data += "===========================================\n\n"
     for idx, (slide_title, slide_content) in enumerate(slides, 1):
         file_data += f"--- SLIDE {idx}: {slide_title} ---\n"
         file_data += f"{slide_content}\n\n"
-    
+
     buf = io.BytesIO(file_data.encode("utf-8"))
     filename = f"{title.replace(' ', '_').lower()}_presentation.txt"
     return StreamingResponse(
         buf,
         media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )

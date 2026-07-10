@@ -1,15 +1,16 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_current_active_user, get_db
-from app.models.user import User
-from app.models.project import Project
 from app.models.document import Document
-from app.models.workspace import Workspace
-from app.models.organization import Organization
 from app.models.membership import Membership
+from app.models.organization import Organization
+from app.models.project import Project
+from app.models.user import User
+from app.models.workspace import Workspace
 from app.schemas.search import SearchResultsResponse
 
 router = APIRouter()
@@ -26,12 +27,7 @@ def search_workspace(
     Search workspace projects, documents, workspaces, and organizations based on string query 'q'.
     """
     if not q or len(q.strip()) < 2:
-        return {
-            "projects": [],
-            "documents": [],
-            "workspaces": [],
-            "organizations": []
-        }
+        return {"projects": [], "documents": [], "workspaces": [], "organizations": []}
 
     # Verify workspace membership
     membership = (
@@ -63,7 +59,7 @@ def search_workspace(
             or_(
                 Project.name.ilike(search_filt),
                 Project.description.ilike(search_filt),
-            )
+            ),
         )
         .limit(20)
         .all()
@@ -78,7 +74,7 @@ def search_workspace(
             or_(
                 Document.name.ilike(search_filt),
                 Document.category.ilike(search_filt),
-            )
+            ),
         )
         .limit(20)
         .all()
@@ -93,7 +89,7 @@ def search_workspace(
             Membership.user_id == current_user.id,
             Workspace.deleted_at.is_(None),
             Membership.deleted_at.is_(None),
-            Workspace.name.ilike(search_filt)
+            Workspace.name.ilike(search_filt),
         )
         .limit(20)
         .all()
@@ -105,7 +101,7 @@ def search_workspace(
         .filter(
             Organization.deleted_at.is_(None),
             Organization.owner_id == current_user.id,
-            Organization.name.ilike(search_filt)
+            Organization.name.ilike(search_filt),
         )
         .limit(20)
         .all()
@@ -115,5 +111,5 @@ def search_workspace(
         "projects": projects,
         "documents": documents,
         "workspaces": workspaces,
-        "organizations": organizations
+        "organizations": organizations,
     }

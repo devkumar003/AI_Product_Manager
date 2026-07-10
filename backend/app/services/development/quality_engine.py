@@ -1,12 +1,18 @@
 import logging
-from uuid import UUID
-from sqlalchemy.orm import Session
 from datetime import datetime
+from uuid import UUID
 
-from app.models.development import CodeReview, CodeQualityScan, RefactoringProposal, BugReport
-from app.services.ai.llm_manager import llm_manager
-from app.services.ai.agents.base import AgentConfig
+from sqlalchemy.orm import Session
+
 from app.ai.utils.json_parser import extract_json_from_text
+from app.models.development import (
+    BugReport,
+    CodeQualityScan,
+    CodeReview,
+    RefactoringProposal,
+)
+from app.services.ai.agents.base import AgentConfig
+from app.services.ai.llm_manager import llm_manager
 
 logger = logging.getLogger("app.services.development.quality_engine")
 
@@ -35,7 +41,9 @@ class QualityEngine:
             res = llm_manager.generate_sync(
                 prompt=llm_prompt,
                 system_prompt=system_prompt,
-                config=AgentConfig(temperature=0.1, response_format={"type": "json_object"})
+                config=AgentConfig(
+                    temperature=0.1, response_format={"type": "json_object"}
+                ),
             )
             data = extract_json_from_text(res.content)
             score = float(data.get("score", 90.0))
@@ -43,7 +51,9 @@ class QualityEngine:
         except Exception as e:
             logger.error(f"Failed to generate structured code review: {e}")
             score = 85.0
-            comments = [{"line": 1, "issue": "Standard fallback check", "severity": "Info"}]
+            comments = [
+                {"line": 1, "issue": "Standard fallback check", "severity": "Info"}
+            ]
 
         review = CodeReview(
             workspace_id=workspace_id,
@@ -51,7 +61,7 @@ class QualityEngine:
             status="Approved" if score >= 80.0 else "Requested Changes",
             reviewer="AI Agent",
             comments=comments,
-            score=score
+            score=score,
         )
         db.add(review)
         db.commit()
@@ -65,20 +75,22 @@ class QualityEngine:
         Code Quality Analyzer.
         """
         logger.info(f"Scanning quality: {file_path}")
-        
+
         # Calculate mock metrics based on content features
         lines = code_content.split("\n")
         complexity = float(min(15.0, len(lines) / 8.0))
         duplication = 2.5 if len(lines) < 100 else 8.4
         coverage = 78.5
-        
+
         scan = CodeQualityScan(
             workspace_id=workspace_id,
             complexity_score=complexity,
             duplication_rate=duplication,
             test_coverage_est=coverage,
             security_vulnerabilities=[{"type": "None Detected", "severity": "None"}],
-            style_violations=[{"rule": "PEP8-E501", "message": "Line too long", "line": 42}]
+            style_violations=[
+                {"rule": "PEP8-E501", "message": "Line too long", "line": 42}
+            ],
         )
         db.add(scan)
         db.commit()
@@ -86,7 +98,12 @@ class QualityEngine:
         return scan
 
     def propose_refactor(
-        self, db: Session, workspace_id: UUID, file_path: str, code_content: str, request_rationale: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        file_path: str,
+        code_content: str,
+        request_rationale: str,
     ) -> RefactoringProposal:
         """
         Refactoring Engine.
@@ -103,16 +120,16 @@ class QualityEngine:
         res = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         proposal = RefactoringProposal(
             workspace_id=workspace_id,
             file_path=file_path,
             original_code=code_content,
             refactored_code=res.content,
             rationale=request_rationale,
-            status="Proposed"
+            status="Proposed",
         )
         db.add(proposal)
         db.commit()
@@ -136,18 +153,18 @@ class QualityEngine:
         res = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.1)
+            config=AgentConfig(temperature=0.1),
         )
 
         # Create bug report
         bug = BugReport(
             workspace_id=workspace_id,
             title=f"Bug detected in {file_path.split('/')[-1]}",
-            description=f"Automated bug scanning found possible errors in implementation.",
+            description="Automated bug scanning found possible errors in implementation.",
             severity="Medium",
             detected_at=datetime.utcnow(),
             suggested_fix=res.content,
-            status="Open"
+            status="Open",
         )
         db.add(bug)
         db.commit()

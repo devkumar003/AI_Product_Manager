@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class DocumentationAgentInput(BaseModel):
-    architecture_overview: str = Field(..., description="Details of project directories and APIs")
+    architecture_overview: str = Field(
+        ..., description="Details of project directories and APIs"
+    )
 
 
 class DocumentationAgent(BaseAgent[DocumentationAgentInput, AgentResponse]):

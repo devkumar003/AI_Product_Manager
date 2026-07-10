@@ -1,7 +1,7 @@
-from typing import Type
 from pydantic import BaseModel, Field
+
+from app.services.ai.agents.base import AgentConfig, BaseAgent
 from app.services.ai.llm_manager import LLMManager
-from app.services.ai.agents.base import BaseAgent, AgentConfig
 from app.services.ai.memory.base import BaseMemory
 
 
@@ -14,11 +14,21 @@ class IdeaInput(BaseModel):
 
 
 class RefinedIdeaOutput(BaseModel):
-    refined_title: str = Field(..., description="A professional, catchy product name/title")
-    refined_description: str = Field(..., description="Detailed, high-clarity summary of the refined idea")
-    target_audience: list[str] = Field(..., description="List of primary user segments/personas")
-    key_objectives: list[str] = Field(..., description="Key objectives and metrics this product solves")
-    feature_milestones: list[str] = Field(..., description="Initial high-level milestones or roadmap items")
+    refined_title: str = Field(
+        ..., description="A professional, catchy product name/title"
+    )
+    refined_description: str = Field(
+        ..., description="Detailed, high-clarity summary of the refined idea"
+    )
+    target_audience: list[str] = Field(
+        ..., description="List of primary user segments/personas"
+    )
+    key_objectives: list[str] = Field(
+        ..., description="Key objectives and metrics this product solves"
+    )
+    feature_milestones: list[str] = Field(
+        ..., description="Initial high-level milestones or roadmap items"
+    )
 
 
 class ProductManagerAgent(BaseAgent[IdeaInput, RefinedIdeaOutput]):
@@ -65,9 +75,15 @@ class PRDInput(BaseModel):
 class PRDOutput(BaseModel):
     prd_title: str = Field(..., description="Title of the PRD document")
     user_persona: str = Field(..., description="In-depth user persona narrative")
-    user_stories: list[str] = Field(..., description="Agile user stories (As a... I want... So that...)")
-    functional_requirements: list[str] = Field(..., description="Detailed feature functional requirements")
-    technical_constraints: list[str] = Field(..., description="System limits, platform choices, or constraints")
+    user_stories: list[str] = Field(
+        ..., description="Agile user stories (As a... I want... So that...)"
+    )
+    functional_requirements: list[str] = Field(
+        ..., description="Detailed feature functional requirements"
+    )
+    technical_constraints: list[str] = Field(
+        ..., description="System limits, platform choices, or constraints"
+    )
 
 
 class PRDGeneratorAgent(BaseAgent[PRDInput, PRDOutput]):
@@ -108,15 +124,25 @@ class PRDGeneratorAgent(BaseAgent[PRDInput, PRDOutput]):
 # -------------------------------------------------------------
 class ArchitectInput(BaseModel):
     prd_title: str = Field(..., description="PRD Title")
-    functional_requirements: list[str] = Field(..., description="Functional requirements list")
+    functional_requirements: list[str] = Field(
+        ..., description="Functional requirements list"
+    )
     technical_constraints: list[str] = Field(..., description="Technical constraints")
 
 
 class ArchitectureOutput(BaseModel):
-    system_description: str = Field(..., description="Overall architecture pattern and system description")
-    database_schema_ddl: list[str] = Field(..., description="Mock database schema tables/columns design DDL")
-    api_endpoints: list[str] = Field(..., description="REST/GraphQL API endpoints specification")
-    deployment_strategy: str = Field(..., description="Docker/Kubernetes orchestration and deployment details")
+    system_description: str = Field(
+        ..., description="Overall architecture pattern and system description"
+    )
+    database_schema_ddl: list[str] = Field(
+        ..., description="Mock database schema tables/columns design DDL"
+    )
+    api_endpoints: list[str] = Field(
+        ..., description="REST/GraphQL API endpoints specification"
+    )
+    deployment_strategy: str = Field(
+        ..., description="Docker/Kubernetes orchestration and deployment details"
+    )
 
 
 class TechnicalArchitectAgent(BaseAgent[ArchitectInput, ArchitectureOutput]):

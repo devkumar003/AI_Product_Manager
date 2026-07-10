@@ -30,6 +30,7 @@ def db_fixture():
     Base.metadata.create_all(bind=engine)
 
     from app.services.integration.plugin_manager import plugin_manager
+
     db = TestingSessionLocal()
     plugin_manager.seed_default_plugins(db)
     try:

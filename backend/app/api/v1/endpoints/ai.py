@@ -1,23 +1,28 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import get_current_active_user, get_db, require_workspace_permission
+from app.api.v1.deps import (
+    get_current_active_user,
+    get_db,
+    require_workspace_permission,
+)
 from app.core.permissions import Permission
-from app.models.user import User
 from app.models.membership import Membership
+from app.models.user import User
 from app.repositories.activity import activity_repo
 from app.schemas.ai import (
-    AIGenerateRequest,
-    AIGenerateResponse,
     AIChatRequest,
     AIChatResponse,
+    AIGenerateRequest,
+    AIGenerateResponse,
 )
-from app.services.ai.llm_manager import LLMManager
-from app.services.ai.orchestrator import AIOrchestrator
-from app.services.ai.memory.conversation import ConversationMemory
 from app.services.ai.ai_usage_service import ai_usage_service
+from app.services.ai.llm_manager import LLMManager
+from app.services.ai.memory.conversation import ConversationMemory
+from app.services.ai.orchestrator import AIOrchestrator
 
 router = APIRouter()
 

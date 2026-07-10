@@ -1,5 +1,6 @@
 import abc
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 
 class BaseAIProvider(abc.ABC):

@@ -1,6 +1,5 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app
 
 
 @pytest.fixture
@@ -42,7 +41,9 @@ def workspace_id(client: TestClient, auth_headers: dict):
     return ws_res.json()["id"]
 
 
-def test_plugins_and_connections_flow(client: TestClient, auth_headers: dict, workspace_id: str):
+def test_plugins_and_connections_flow(
+    client: TestClient, auth_headers: dict, workspace_id: str
+):
     # 1. List Plugins (verify seeded)
     res = client.get(
         "/api/v1/integration/plugins",
@@ -51,7 +52,7 @@ def test_plugins_and_connections_flow(client: TestClient, auth_headers: dict, wo
     assert res.status_code == 200
     plugins = res.json()
     assert len(plugins) >= 5
-    
+
     # Get a plugin slug (e.g. 'github')
     github_plugin = next(p for p in plugins if p["slug"] == "github")
     assert github_plugin is not None
@@ -76,10 +77,7 @@ def test_plugins_and_connections_flow(client: TestClient, auth_headers: dict, wo
     # 4. Create manual connection
     res_conn = client.post(
         f"/api/v1/integration/connections?workspace_id={workspace_id}",
-        json={
-            "plugin_id": plugin_id,
-            "config": {"account_owner": "test_owner"}
-        },
+        json={"plugin_id": plugin_id, "config": {"account_owner": "test_owner"}},
         headers=auth_headers,
     )
     assert res_conn.status_code == 200
@@ -101,7 +99,9 @@ def test_plugins_and_connections_flow(client: TestClient, auth_headers: dict, wo
     assert res_disc.status_code == 204
 
 
-def test_oauth_flow_and_api_proxies(client: TestClient, auth_headers: dict, workspace_id: str):
+def test_oauth_flow_and_api_proxies(
+    client: TestClient, auth_headers: dict, workspace_id: str
+):
     # 1. Get Authorize URL
     res_url = client.get(
         "/api/v1/integration/oauth/authorize?provider=github",
@@ -116,7 +116,7 @@ def test_oauth_flow_and_api_proxies(client: TestClient, auth_headers: dict, work
         json={
             "code": "test_auth_code_123",
             "redirect_uri": "http://localhost:3000/dashboard/integrations",
-            "provider": "github"
+            "provider": "github",
         },
         headers=auth_headers,
     )
@@ -153,7 +153,7 @@ def test_mcp_servers_flow(client: TestClient, auth_headers: dict, workspace_id: 
         json={
             "name": "Local Filesystem Tools",
             "url": "http://localhost:8080/mcp",
-            "headers": {"Authorization": "Bearer local_token"}
+            "headers": {"Authorization": "Bearer local_token"},
         },
         headers=auth_headers,
     )
@@ -179,10 +179,7 @@ def test_mcp_servers_flow(client: TestClient, auth_headers: dict, workspace_id: 
     # 4. Call Tool
     res_call = client.post(
         f"/api/v1/integration/mcp/{server_id}/call?workspace_id={workspace_id}",
-        json={
-            "tool_name": "web_search",
-            "arguments": {"query": "Next.js 15"}
-        },
+        json={"tool_name": "web_search", "arguments": {"query": "Next.js 15"}},
         headers=auth_headers,
     )
     assert res_call.status_code == 200
@@ -204,7 +201,7 @@ def test_webhooks_and_logs(client: TestClient, auth_headers: dict, workspace_id:
             "name": "Slack Dispatcher Event",
             "target_url": "https://hooks.slack.com/services/test",
             "events": ["planning.milestone_completed", "document.created"],
-            "secret_token": "whsec_customtoken_1"
+            "secret_token": "whsec_customtoken_1",
         },
         headers=auth_headers,
     )
@@ -224,7 +221,7 @@ def test_webhooks_and_logs(client: TestClient, auth_headers: dict, workspace_id:
         f"/api/v1/integration/webhooks/trigger?workspace_id={workspace_id}",
         json={
             "event": "document.created",
-            "payload": {"document_id": "doc_123", "title": "Product Specs"}
+            "payload": {"document_id": "doc_123", "title": "Product Specs"},
         },
         headers=auth_headers,
     )

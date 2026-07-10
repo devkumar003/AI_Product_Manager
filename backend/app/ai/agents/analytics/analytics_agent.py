@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class AnalyticsAgentInput(BaseModel):
-    product_vision: str = Field(..., description="Core product goals and target metrics")
+    product_vision: str = Field(
+        ..., description="Core product goals and target metrics"
+    )
 
 
 class AnalyticsAgent(BaseAgent[AnalyticsAgentInput, AgentResponse]):

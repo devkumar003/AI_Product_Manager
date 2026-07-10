@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, String, Uuid, JSON
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, String, Uuid
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseEntity
@@ -12,7 +12,9 @@ class Notification(BaseEntity):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    type = Column(String(50), default="Info", nullable=False) # Info, Warning, Error, Success
+    type = Column(
+        String(50), default="Info", nullable=False
+    )  # Info, Warning, Error, Success
     title = Column(String(255), nullable=False)
     message = Column(String(1024), nullable=False)
     read = Column(Boolean, default=False, nullable=False)

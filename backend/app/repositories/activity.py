@@ -1,4 +1,5 @@
 import uuid
+
 from sqlalchemy.orm import Session
 
 from app.models.activity import Activity

@@ -4,9 +4,10 @@ Task 14 — Observability: Health Checks, Readiness, Liveness, Prometheus Metric
 Provides /health, /ready, /live endpoints and a metrics registry.
 """
 
-import time
 import logging
+import time
 from typing import Any
+
 from fastapi import APIRouter
 
 logger = logging.getLogger("app.ai.observability")

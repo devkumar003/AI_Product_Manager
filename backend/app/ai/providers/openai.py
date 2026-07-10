@@ -1,7 +1,10 @@
 import json
 import time
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.ai.providers.base import BaseProvider
 from app.ai.schemas import AIResponse, StreamingToken, TokenUsage
 
@@ -19,7 +22,7 @@ class OpenAIProvider(BaseProvider):
 
         model = config.get("model", "gpt-4o")
         start_time = time.time()
-        
+
         payload = {
             "model": model,
             "messages": messages,
@@ -90,12 +93,17 @@ class OpenAIProvider(BaseProvider):
 
         async with httpx.AsyncClient(timeout=config.get("timeout", 60.0)) as client:
             async with client.stream(
-                "POST", f"{self.base_url}/chat/completions", headers=headers, json=payload
+                "POST",
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
             ) as response:
                 if response.status_code != 200:
                     body = await response.aread()
                     yield StreamingToken(
-                        token="", done=True, error=f"OpenAI Stream failed: {body.decode('utf-8')}"
+                        token="",
+                        done=True,
+                        error=f"OpenAI Stream failed: {body.decode('utf-8')}",
                     )
                     return
 
@@ -141,7 +149,10 @@ class OpenAIProvider(BaseProvider):
     async def moderation(self, text: str, config: dict[str, Any]) -> bool:
         if not self.api_key:
             # Fallback to keyword scan if API key is not present
-            return any(bad in text.lower() for bad in ["unauthorized_injection", "malicious_exploit"])
+            return any(
+                bad in text.lower()
+                for bad in ["unauthorized_injection", "malicious_exploit"]
+            )
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -167,6 +178,10 @@ class OpenAIProvider(BaseProvider):
     ) -> float:
         # gpt-4o pricing: $5.00 / M input, $15.00 / M output
         if "gpt-4" in model:
-            return (prompt_tokens * 5.00 / 1_000_000) + (completion_tokens * 15.00 / 1_000_000)
+            return (prompt_tokens * 5.00 / 1_000_000) + (
+                completion_tokens * 15.00 / 1_000_000
+            )
         # gpt-3.5 pricing: $0.50 / M input, $1.50 / M output
-        return (prompt_tokens * 0.50 / 1_000_000) + (completion_tokens * 1.50 / 1_000_000)
+        return (prompt_tokens * 0.50 / 1_000_000) + (
+            completion_tokens * 1.50 / 1_000_000
+        )

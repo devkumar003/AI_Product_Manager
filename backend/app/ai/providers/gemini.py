@@ -1,7 +1,10 @@
 import json
 import time
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.ai.providers.base import BaseProvider
 from app.ai.schemas import AIResponse, StreamingToken, TokenUsage
 
@@ -60,9 +63,11 @@ class GeminiProvider(BaseProvider):
 
             data = response.json()
             content = data["candidates"][0]["content"]["parts"][0]["text"]
-            
+
             # Estimate tokens
-            prompt_tokens = sum(self.token_count(msg.get("content", "")) for msg in messages)
+            prompt_tokens = sum(
+                self.token_count(msg.get("content", "")) for msg in messages
+            )
             completion_tokens = self.token_count(content)
             cost = self.cost_estimate(prompt_tokens, completion_tokens, model)
 
@@ -104,7 +109,9 @@ class GeminiProvider(BaseProvider):
                 if response.status_code != 200:
                     body = await response.aread()
                     yield StreamingToken(
-                        token="", done=True, error=f"Gemini Stream failed: {body.decode('utf-8')}"
+                        token="",
+                        done=True,
+                        error=f"Gemini Stream failed: {body.decode('utf-8')}",
                     )
                     return
 
@@ -155,4 +162,6 @@ class GeminiProvider(BaseProvider):
         self, prompt_tokens: int, completion_tokens: int, model: str
     ) -> float:
         # Gemini 1.5 Pro pricing: $1.25 / M input, $5.00 / M output
-        return (prompt_tokens * 1.25 / 1_000_000) + (completion_tokens * 5.00 / 1_000_000)
+        return (prompt_tokens * 1.25 / 1_000_000) + (
+            completion_tokens * 5.00 / 1_000_000
+        )

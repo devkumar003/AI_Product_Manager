@@ -1,5 +1,6 @@
 import math
 from typing import Any
+
 from app.services.ai.memory.base import BaseMemory
 
 
@@ -83,9 +84,7 @@ class VectorMemory(BaseMemory):
                 continue
 
             vec = self._simulated_embedding(text)
-            self._store[key].append(
-                {"text": text, "vector": vec, "metadata": metadata}
-            )
+            self._store[key].append({"text": text, "vector": vec, "metadata": metadata})
 
     async def clear(self, key: str) -> None:
         if key in self._store:

@@ -10,8 +10,8 @@ Extends the existing memory foundation with:
 """
 
 import time
-import math
 from typing import Any
+
 from app.ai.memory.memory_manager import BaseMemory
 
 
@@ -26,7 +26,12 @@ class ProjectMemory(BaseMemory):
         if not entries:
             return []
         context_lines = [f"- {e.get('content', '')}" for e in entries[-20:]]
-        return [{"role": "system", "content": f"[Project Context]\n" + "\n".join(context_lines)}]
+        return [
+            {
+                "role": "system",
+                "content": "[Project Context]\n" + "\n".join(context_lines),
+            }
+        ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
         if key not in self._store:
@@ -59,7 +64,9 @@ class LongTermMemory(BaseMemory):
         ranked = sorted(entries, key=lambda e: e.get("relevance", 0.5), reverse=True)
         top = ranked[:10]
         lines = [f"- [{e.get('category', 'fact')}] {e.get('content', '')}" for e in top]
-        return [{"role": "system", "content": f"[Long-Term Memory]\n" + "\n".join(lines)}]
+        return [
+            {"role": "system", "content": "[Long-Term Memory]\n" + "\n".join(lines)}
+        ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
         if key not in self._store:
@@ -76,7 +83,9 @@ class LongTermMemory(BaseMemory):
         if key in self._store:
             del self._store[key]
 
-    async def boost_relevance(self, key: str, content_fragment: str, boost: float = 0.1) -> None:
+    async def boost_relevance(
+        self, key: str, content_fragment: str, boost: float = 0.1
+    ) -> None:
         """Increase relevance of entries matching a content fragment."""
         entries = self._store.get(key, [])
         fragment_lower = content_fragment.lower()

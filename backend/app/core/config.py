@@ -40,18 +40,23 @@ class Settings(BaseSettings):
     @classmethod
     def assemble_db_connection(cls, v: str | None, info: ValidationInfo) -> Any:
         import os
+
         values = info.data
         if not v:
             v = values.get("DATABASE_URL") or os.getenv("DATABASE_URL")
         if isinstance(v, str) and v:
             if v.startswith("postgres://"):
                 v = v.replace("postgres://", "postgresql+psycopg2://", 1)
-            elif v.startswith("postgresql://") and "+psycopg" not in v and "+asyncpg" not in v:
+            elif (
+                v.startswith("postgresql://")
+                and "+psycopg" not in v
+                and "+asyncpg" not in v
+            ):
                 v = v.replace("postgresql://", "postgresql+psycopg2://", 1)
             return v
         if values.get("ENVIRONMENT") == "testing":
             return "sqlite:///./test.db"
-        
+
         host = values.get("POSTGRES_SERVER", "localhost")
         port = int(values.get("POSTGRES_PORT", 5432))
         postgres_uri = f"postgresql+psycopg2://{values.get('POSTGRES_USER', 'postgres')}:{values.get('POSTGRES_PASSWORD', 'postgres')}@{host}:{port}/{values.get('POSTGRES_DB', 'ai_product_os')}"
@@ -61,12 +66,15 @@ class Settings(BaseSettings):
             return postgres_uri
 
         import socket
+
         try:
             with socket.create_connection((host, port), timeout=0.5):
                 pass
             return postgres_uri
         except Exception:
-            print(f"PostgreSQL server at {host}:{port} is unreachable. Falling back to local SQLite: sqlite:///./development.db")
+            print(
+                f"PostgreSQL server at {host}:{port} is unreachable. Falling back to local SQLite: sqlite:///./development.db"
+            )
             return "sqlite:///./development.db"
 
     # Redis Config

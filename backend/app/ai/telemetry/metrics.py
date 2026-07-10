@@ -1,5 +1,5 @@
-import time
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -37,12 +37,22 @@ class TelemetryRegistry:
         Record operational telemetry variables from an agent or workflow step execution.
         """
         # 1. Update Global Metrics
-        self._update_metrics_object(self._global_metrics, provider, model, tokens, cost, latency_ms, success)
+        self._update_metrics_object(
+            self._global_metrics, provider, model, tokens, cost, latency_ms, success
+        )
 
         # 2. Update Workspace-level Metrics
         if workspace_id not in self._workspace_metrics:
             self._workspace_metrics[workspace_id] = ServiceMetrics()
-        self._update_metrics_object(self._workspace_metrics[workspace_id], provider, model, tokens, cost, latency_ms, success)
+        self._update_metrics_object(
+            self._workspace_metrics[workspace_id],
+            provider,
+            model,
+            tokens,
+            cost,
+            latency_ms,
+            success,
+        )
 
     def _update_metrics_object(
         self,
@@ -81,9 +91,7 @@ class TelemetryRegistry:
             else 100.0
         )
         avg_latency = (
-            m.accumulated_latency_ms / m.total_requests
-            if m.total_requests > 0
-            else 0.0
+            m.accumulated_latency_ms / m.total_requests if m.total_requests > 0 else 0.0
         )
         return {
             "total_requests": m.total_requests,

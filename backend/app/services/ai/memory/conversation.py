@@ -1,5 +1,6 @@
 import json
 from typing import Any
+
 from app.core.redis import cache_manager
 from app.services.ai.memory.base import BaseMemory
 

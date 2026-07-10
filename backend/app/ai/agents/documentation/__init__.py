@@ -1,4 +1,7 @@
-from app.ai.agents.documentation.docs_agent import DocumentationAgent, DocumentationAgentInput
+from app.ai.agents.documentation.docs_agent import (
+    DocumentationAgent,
+    DocumentationAgentInput,
+)
 
 __all__ = [
     "DocumentationAgent",

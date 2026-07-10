@@ -6,6 +6,7 @@ Adds AgentMemory (per-agent execution history) and memory cleanup utilities.
 
 import time
 from typing import Any
+
 from app.ai.memory.memory_manager import BaseMemory
 
 
@@ -25,7 +26,12 @@ class AgentMemory(BaseMemory):
             return []
         recent = entries[-5:]
         lines = [f"- [{e.get('timestamp', '')}] {e.get('summary', '')}" for e in recent]
-        return [{"role": "system", "content": f"[Agent History for {key}]\n" + "\n".join(lines)}]
+        return [
+            {
+                "role": "system",
+                "content": f"[Agent History for {key}]\n" + "\n".join(lines),
+            }
+        ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
         if key not in self._store:
@@ -34,7 +40,7 @@ class AgentMemory(BaseMemory):
         entry.setdefault("timestamp", time.time())
         self._store[key].append(entry)
         if len(self._store[key]) > self._max:
-            self._store[key] = self._store[key][-self._max:]
+            self._store[key] = self._store[key][-self._max :]
 
     async def clear(self, key: str) -> None:
         if key in self._store:
@@ -45,7 +51,9 @@ class MemoryCleanup:
     """Utility for cleaning up expired or low-relevance memory entries."""
 
     @staticmethod
-    async def cleanup_by_age(memory: BaseMemory, key: str, max_age_seconds: float = 86400) -> int:
+    async def cleanup_by_age(
+        memory: BaseMemory, key: str, max_age_seconds: float = 86400
+    ) -> int:
         """Remove entries older than max_age_seconds (default 24h)."""
         if not hasattr(memory, "_store"):
             return 0
@@ -55,7 +63,9 @@ class MemoryCleanup:
             return 0
         now = time.time()
         before = len(entries)
-        store[key] = [e for e in entries if now - e.get("timestamp", now) < max_age_seconds]
+        store[key] = [
+            e for e in entries if now - e.get("timestamp", now) < max_age_seconds
+        ]
         return before - len(store[key])
 
     @staticmethod

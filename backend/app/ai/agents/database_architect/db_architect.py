@@ -1,11 +1,14 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class DBArchitectInput(BaseModel):
     tech_stack: str = Field(..., description="Stack details, primarily DB type")
-    requirements: str = Field(..., description="Details on features requiring data persistency")
+    requirements: str = Field(
+        ..., description="Details on features requiring data persistency"
+    )
 
 
 class DBArchitect(BaseAgent[DBArchitectInput, AgentResponse]):

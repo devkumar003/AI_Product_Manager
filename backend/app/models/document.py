@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Uuid, JSON
+from sqlalchemy import JSON, Boolean, Column, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseEntity

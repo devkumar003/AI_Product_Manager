@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class MeetingAgentInput(BaseModel):
-    meeting_transcript: str = Field(..., description="Raw text transcript of the project meeting")
+    meeting_transcript: str = Field(
+        ..., description="Raw text transcript of the project meeting"
+    )
 
 
 class MeetingAgent(BaseAgent[MeetingAgentInput, AgentResponse]):

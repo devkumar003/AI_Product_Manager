@@ -1,13 +1,21 @@
 from app.ai.rag.rag_engine import (
-    DocumentChunk, chunk_text,
-    BaseEmbeddingService, LocalEmbeddingService, LLMEmbeddingService,
-    BaseVectorStore, InMemoryVectorStore,
+    BaseEmbeddingService,
+    BaseVectorStore,
+    DocumentChunk,
+    InMemoryVectorStore,
+    LLMEmbeddingService,
+    LocalEmbeddingService,
     RAGRetriever,
+    chunk_text,
 )
 
 __all__ = [
-    "DocumentChunk", "chunk_text",
-    "BaseEmbeddingService", "LocalEmbeddingService", "LLMEmbeddingService",
-    "BaseVectorStore", "InMemoryVectorStore",
+    "DocumentChunk",
+    "chunk_text",
+    "BaseEmbeddingService",
+    "LocalEmbeddingService",
+    "LLMEmbeddingService",
+    "BaseVectorStore",
+    "InMemoryVectorStore",
     "RAGRetriever",
 ]

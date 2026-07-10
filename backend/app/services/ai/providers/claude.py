@@ -1,6 +1,9 @@
 import json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
+
 from app.services.ai.providers.base import BaseAIProvider
 
 
@@ -37,6 +40,7 @@ class ClaudeProvider(BaseAIProvider):
     ) -> str:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 return "Simulated Claude LLM response content for development and testing verification."
             raise ValueError("Anthropic API key is not configured.")
@@ -72,6 +76,7 @@ class ClaudeProvider(BaseAIProvider):
     ) -> AsyncIterator[str]:
         if not self.api_key:
             from app.core.settings import settings
+
             if settings.ENVIRONMENT in ("testing", "development"):
                 yield "Simulated Claude stream chunk"
                 return

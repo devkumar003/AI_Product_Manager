@@ -1,16 +1,17 @@
 import logging
 from typing import Any
-from app.services.ai.llm_manager import LLMManager, llm_manager
+
 from app.services.ai.agents.product_agents import (
-    ProductManagerAgent,
-    PRDGeneratorAgent,
-    TechnicalArchitectAgent,
-    IdeaInput,
-    PRDInput,
     ArchitectInput,
+    IdeaInput,
+    PRDGeneratorAgent,
+    PRDInput,
+    ProductManagerAgent,
+    TechnicalArchitectAgent,
 )
-from app.services.ai.memory.workspace import WorkspaceMemory
+from app.services.ai.llm_manager import LLMManager, llm_manager
 from app.services.ai.memory.conversation import ConversationMemory
+from app.services.ai.memory.workspace import WorkspaceMemory
 
 logger = logging.getLogger("app.services.ai.orchestrator")
 
@@ -74,9 +75,7 @@ class AIOrchestrator:
             target_audience=refined_idea.target_audience,
             key_objectives=refined_idea.key_objectives,
         )
-        prd_document = await self.prd_agent.execute(
-            prd_input, memory_key=workspace_id
-        )
+        prd_document = await self.prd_agent.execute(prd_input, memory_key=workspace_id)
 
         # Store PRD details in Workspace Memory
         await self.workspace_memory.store(
@@ -102,4 +101,3 @@ class AIOrchestrator:
 
 
 ai_orchestrator = AIOrchestrator(llm_manager)
-

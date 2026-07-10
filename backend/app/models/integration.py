@@ -1,6 +1,6 @@
-from sqlalchemy import Column, String, Boolean, JSON, Uuid, ForeignKey, DateTime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 from app.models.base import BaseEntity
 
@@ -12,26 +12,40 @@ class IntegrationPlugin(BaseEntity):
     slug = Column(String, unique=True, index=True, nullable=False)
     description = Column(String, nullable=True)
     plugin_version = Column(String, default="1.0.0", nullable=False)
-    plugin_type = Column(String, default="OAuth", nullable=False)  # OAuth, APIKey, Webhook, MCP
-    category = Column(String, default="Developer Tools", nullable=False)  # Dev, Chat, Email, Calendar, Drive, Design
-    settings_schema = Column(JSON, nullable=True)  # JSON Schema for configuration parameters
+    plugin_type = Column(
+        String, default="OAuth", nullable=False
+    )  # OAuth, APIKey, Webhook, MCP
+    category = Column(
+        String, default="Developer Tools", nullable=False
+    )  # Dev, Chat, Email, Calendar, Drive, Design
+    settings_schema = Column(
+        JSON, nullable=True
+    )  # JSON Schema for configuration parameters
     is_active = Column(Boolean, default=True, nullable=False)
 
-    connections = relationship("IntegrationConnection", back_populates="plugin", cascade="all, delete-orphan")
+    connections = relationship(
+        "IntegrationConnection", back_populates="plugin", cascade="all, delete-orphan"
+    )
 
 
 class IntegrationConnection(BaseEntity):
     __tablename__ = "integration_connections"
 
     workspace_id = Column(Uuid, ForeignKey("workspaces.id"), index=True, nullable=False)
-    plugin_id = Column(Uuid, ForeignKey("integration_plugins.id"), index=True, nullable=False)
+    plugin_id = Column(
+        Uuid, ForeignKey("integration_plugins.id"), index=True, nullable=False
+    )
     config = Column(JSON, nullable=True)  # Non-sensitive configuration options
-    status = Column(String, default="Connected", nullable=False)  # Connected, Disconnected, Error
+    status = Column(
+        String, default="Connected", nullable=False
+    )  # Connected, Disconnected, Error
     last_sync_at = Column(DateTime, nullable=True)
     error_message = Column(String, nullable=True)
 
     plugin = relationship("IntegrationPlugin", back_populates="connections")
-    logs = relationship("IntegrationLog", back_populates="connection", cascade="all, delete-orphan")
+    logs = relationship(
+        "IntegrationLog", back_populates="connection", cascade="all, delete-orphan"
+    )
 
 
 class EncryptedSecret(BaseEntity):
@@ -67,7 +81,9 @@ class IntegrationLog(BaseEntity):
     __tablename__ = "integration_logs"
 
     workspace_id = Column(Uuid, ForeignKey("workspaces.id"), index=True, nullable=False)
-    connection_id = Column(Uuid, ForeignKey("integration_connections.id"), index=True, nullable=True)
+    connection_id = Column(
+        Uuid, ForeignKey("integration_connections.id"), index=True, nullable=True
+    )
     action = Column(String, nullable=False)
     status = Column(String, nullable=False)  # Success, Failed
     payload = Column(JSON, nullable=True)

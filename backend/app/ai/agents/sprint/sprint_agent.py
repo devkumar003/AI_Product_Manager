@@ -1,11 +1,16 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class SprintAgentInput(BaseModel):
-    roadmap_milestones: str = Field(..., description="Details of current roadmap milestones")
-    team_velocity: int = Field(default=30, description="Estimated story points per sprint")
+    roadmap_milestones: str = Field(
+        ..., description="Details of current roadmap milestones"
+    )
+    team_velocity: int = Field(
+        default=30, description="Estimated story points per sprint"
+    )
 
 
 class SprintAgent(BaseAgent[SprintAgentInput, AgentResponse]):

@@ -1,9 +1,12 @@
 import logging
-from typing import Any, AsyncIterator, Generic, Type, TypeVar
-from pydantic import BaseModel, Field
+from collections.abc import AsyncIterator
+from typing import Any, Generic, TypeVar
+
+from pydantic import BaseModel
+
+from app.ai.utils.json_parser import extract_json_from_text
 from app.services.ai.llm_manager import LLMManager
 from app.services.ai.memory.base import BaseMemory
-from app.ai.utils.json_parser import extract_json_from_text
 
 logger = logging.getLogger("app.services.ai.agents")
 
@@ -29,8 +32,8 @@ class BaseAgent(Generic[InputT, OutputT]):
         self,
         system_prompt: str,
         prompt_template: str,
-        input_schema: Type[InputT],
-        output_schema: Type[OutputT],
+        input_schema: type[InputT],
+        output_schema: type[OutputT],
         llm_manager: LLMManager,
         config: AgentConfig | None = None,
         memory: BaseMemory | None = None,
@@ -88,10 +91,12 @@ class BaseAgent(Generic[InputT, OutputT]):
                         )
                         # Add self-healing feedback to message chain for next retry attempt
                         messages.append({"role": "assistant", "content": response_text})
-                        messages.append({
-                            "role": "user",
-                            "content": f"Your previous output failed Pydantic schema validation: {parse_err}. Please return ONLY valid JSON strictly adhering to the schema."
-                        })
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": f"Your previous output failed Pydantic schema validation: {parse_err}. Please return ONLY valid JSON strictly adhering to the schema.",
+                            }
+                        )
                         raise ValueError(
                             f"Model output did not match expected Pydantic schema structure: {parse_err}. Output: {response_text}"
                         )
@@ -112,9 +117,7 @@ class BaseAgent(Generic[InputT, OutputT]):
 
             except Exception as e:
                 last_error = e
-                logger.warning(
-                    f"Error encountered on attempt {attempt + 1}: {str(e)}"
-                )
+                logger.warning(f"Error encountered on attempt {attempt + 1}: {str(e)}")
 
         raise Exception(
             f"Agent execution failed after {self.config.max_retries} attempts. Last error: {str(last_error)}"

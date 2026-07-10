@@ -6,62 +6,114 @@ Each engine call follows: schema → prompt → LLM → parse → validate → r
 """
 
 import json
-import time
 import logging
-from typing import Any, Type
+import time
+from typing import Any
+
 from pydantic import BaseModel
 
 from app.ai.core.llm_manager import LLMManager
-from app.ai.telemetry.metrics import TelemetryRegistry
-from app.ai.utils.security import AISecurityManager
 from app.ai.exceptions import ValidationException
-
-from app.ai.services.idea_engine import (
-    IdeaAnalysisInput, IdeaAnalysisOutput, IDEA_ANALYSIS_PROMPT,
-    IdeaValidationInput, IdeaValidationOutput, IDEA_VALIDATION_PROMPT,
-    ProductDiscoveryInput, ProductDiscoveryOutput, PRODUCT_DISCOVERY_PROMPT,
-)
-from app.ai.services.requirement_engine import (
-    RequirementInput, RequirementOutput, REQUIREMENT_PROMPT,
-    UserStoryInput, UserStoryOutput, USER_STORY_PROMPT,
-    PRDInput, PRDOutput, PRD_PROMPT,
-)
 from app.ai.services.architecture_engine import (
-    ArchitectureInput, ArchitectureOutput, ARCHITECTURE_PROMPT,
-    DatabaseInput, DatabaseOutput, DATABASE_PROMPT,
-    APIInput, APIOutput, API_PROMPT,
-)
-from app.ai.services.planning_engine import (
-    RoadmapInput, RoadmapOutput, ROADMAP_PROMPT,
-    SprintInput, SprintOutput, SPRINT_PROMPT,
-    TaskBreakdownInput, TaskBreakdownOutput, TASK_BREAKDOWN_PROMPT,
-    PrioritizationInput, PrioritizationOutput, PRIORITIZATION_PROMPT,
+    API_PROMPT,
+    ARCHITECTURE_PROMPT,
+    DATABASE_PROMPT,
+    APIInput,
+    APIOutput,
+    ArchitectureInput,
+    ArchitectureOutput,
+    DatabaseInput,
+    DatabaseOutput,
 )
 from app.ai.services.estimation_engine import (
-    CostEstimationInput, CostEstimationOutput, COST_ESTIMATION_PROMPT,
-    TimelineInput, TimelineOutput, TIMELINE_PROMPT,
-    RiskAnalysisInput, RiskAnalysisOutput, RISK_ANALYSIS_PROMPT,
+    COST_ESTIMATION_PROMPT,
+    RISK_ANALYSIS_PROMPT,
+    TIMELINE_PROMPT,
+    CostEstimationInput,
+    CostEstimationOutput,
+    RiskAnalysisInput,
+    RiskAnalysisOutput,
+    TimelineInput,
+    TimelineOutput,
 )
+from app.ai.services.idea_engine import (
+    IDEA_ANALYSIS_PROMPT,
+    IDEA_VALIDATION_PROMPT,
+    PRODUCT_DISCOVERY_PROMPT,
+    IdeaAnalysisInput,
+    IdeaAnalysisOutput,
+    IdeaValidationInput,
+    IdeaValidationOutput,
+    ProductDiscoveryInput,
+    ProductDiscoveryOutput,
+)
+from app.ai.services.planning_engine import (
+    PRIORITIZATION_PROMPT,
+    ROADMAP_PROMPT,
+    SPRINT_PROMPT,
+    TASK_BREAKDOWN_PROMPT,
+    PrioritizationInput,
+    PrioritizationOutput,
+    RoadmapInput,
+    RoadmapOutput,
+    SprintInput,
+    SprintOutput,
+    TaskBreakdownInput,
+    TaskBreakdownOutput,
+)
+from app.ai.services.requirement_engine import (
+    PRD_PROMPT,
+    REQUIREMENT_PROMPT,
+    USER_STORY_PROMPT,
+    PRDInput,
+    PRDOutput,
+    RequirementInput,
+    RequirementOutput,
+    UserStoryInput,
+    UserStoryOutput,
+)
+from app.ai.telemetry.metrics import TelemetryRegistry
+from app.ai.utils.security import AISecurityManager
 
 logger = logging.getLogger("app.ai.services.engine_executor")
 
 
 # Map engine names to (InputType, OutputType, system_prompt)
-ENGINE_REGISTRY: dict[str, tuple[Type[BaseModel], Type[BaseModel], str]] = {
+ENGINE_REGISTRY: dict[str, tuple[type[BaseModel], type[BaseModel], str]] = {
     "idea_analysis": (IdeaAnalysisInput, IdeaAnalysisOutput, IDEA_ANALYSIS_PROMPT),
-    "idea_validation": (IdeaValidationInput, IdeaValidationOutput, IDEA_VALIDATION_PROMPT),
-    "product_discovery": (ProductDiscoveryInput, ProductDiscoveryOutput, PRODUCT_DISCOVERY_PROMPT),
+    "idea_validation": (
+        IdeaValidationInput,
+        IdeaValidationOutput,
+        IDEA_VALIDATION_PROMPT,
+    ),
+    "product_discovery": (
+        ProductDiscoveryInput,
+        ProductDiscoveryOutput,
+        PRODUCT_DISCOVERY_PROMPT,
+    ),
     "requirement_generator": (RequirementInput, RequirementOutput, REQUIREMENT_PROMPT),
     "user_story_generator": (UserStoryInput, UserStoryOutput, USER_STORY_PROMPT),
     "prd_generator": (PRDInput, PRDOutput, PRD_PROMPT),
-    "architecture_generator": (ArchitectureInput, ArchitectureOutput, ARCHITECTURE_PROMPT),
+    "architecture_generator": (
+        ArchitectureInput,
+        ArchitectureOutput,
+        ARCHITECTURE_PROMPT,
+    ),
     "database_generator": (DatabaseInput, DatabaseOutput, DATABASE_PROMPT),
     "api_generator": (APIInput, APIOutput, API_PROMPT),
     "roadmap_generator": (RoadmapInput, RoadmapOutput, ROADMAP_PROMPT),
     "sprint_generator": (SprintInput, SprintOutput, SPRINT_PROMPT),
     "task_breakdown": (TaskBreakdownInput, TaskBreakdownOutput, TASK_BREAKDOWN_PROMPT),
-    "feature_prioritization": (PrioritizationInput, PrioritizationOutput, PRIORITIZATION_PROMPT),
-    "cost_estimation": (CostEstimationInput, CostEstimationOutput, COST_ESTIMATION_PROMPT),
+    "feature_prioritization": (
+        PrioritizationInput,
+        PrioritizationOutput,
+        PRIORITIZATION_PROMPT,
+    ),
+    "cost_estimation": (
+        CostEstimationInput,
+        CostEstimationOutput,
+        COST_ESTIMATION_PROMPT,
+    ),
     "timeline_prediction": (TimelineInput, TimelineOutput, TIMELINE_PROMPT),
     "risk_analysis": (RiskAnalysisInput, RiskAnalysisOutput, RISK_ANALYSIS_PROMPT),
 }
@@ -83,7 +135,9 @@ class EngineExecutor:
         model: str | None = None,
     ) -> dict[str, Any]:
         if engine_name not in ENGINE_REGISTRY:
-            raise ValueError(f"Unknown engine: '{engine_name}'. Available: {list(ENGINE_REGISTRY.keys())}")
+            raise ValueError(
+                f"Unknown engine: '{engine_name}'. Available: {list(ENGINE_REGISTRY.keys())}"
+            )
 
         input_cls, output_cls, system_prompt = ENGINE_REGISTRY[engine_name]
         start_time = time.time()

@@ -1,5 +1,6 @@
 import re
 from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -58,7 +59,9 @@ class PromptManager:
             self._prompts[name] = {}
         self._prompts[name][version] = pt
 
-    def get_prompt(self, name: str, version: str | None = None) -> PromptTemplate | None:
+    def get_prompt(
+        self, name: str, version: str | None = None
+    ) -> PromptTemplate | None:
         """Fetch a specific prompt template. Returns the latest registered version if none is specified."""
         versions = self._prompts.get(name)
         if not versions:
@@ -97,6 +100,8 @@ class PromptManager:
         try:
             return content.format(**variables)
         except KeyError as ke:
-            raise ValueError(f"Failed to interpolate variables for prompt template '{name}': Missing {str(ke)}")
+            raise ValueError(
+                f"Failed to interpolate variables for prompt template '{name}': Missing {str(ke)}"
+            )
         except Exception as e:
             raise ValueError(f"Interpolation error for template '{name}': {str(e)}")

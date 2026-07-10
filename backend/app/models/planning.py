@@ -1,5 +1,13 @@
-import uuid
-from sqlalchemy import Column, String, Uuid, ForeignKey, Float, DateTime, Integer, JSON, Boolean
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Uuid,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseEntity
@@ -15,8 +23,12 @@ class Goal(BaseEntity):
     )
     name = Column(String(255), nullable=False)
     description = Column(String(2048), nullable=True)
-    type = Column(String(50), nullable=False)  # Business, Product, Technical, Sprint, Release
-    status = Column(String(50), default="Open", nullable=False)  # Open, In Progress, Achieved, Abandoned
+    type = Column(
+        String(50), nullable=False
+    )  # Business, Product, Technical, Sprint, Release
+    status = Column(
+        String(50), default="Open", nullable=False
+    )  # Open, In Progress, Achieved, Abandoned
     progress = Column(Float, default=0.0, nullable=False)
     target_date = Column(DateTime, nullable=True)
 
@@ -34,11 +46,19 @@ class Mission(BaseEntity):
     )
     title = Column(String(255), nullable=False)
     description = Column(String(2048), nullable=True)
-    status = Column(String(50), default="Planned", nullable=False)  # Planned, Executing, Completed, Cancelled
-    objectives = Column(JSON, default=list, nullable=False)  # List of target goals / objectives
-    milestones = Column(JSON, default=list, nullable=False)  # Milestones list with dates
+    status = Column(
+        String(50), default="Planned", nullable=False
+    )  # Planned, Executing, Completed, Cancelled
+    objectives = Column(
+        JSON, default=list, nullable=False
+    )  # List of target goals / objectives
+    milestones = Column(
+        JSON, default=list, nullable=False
+    )  # Milestones list with dates
     deliverables = Column(JSON, default=list, nullable=False)  # Deliverables list
-    execution_plan = Column(JSON, default=dict, nullable=False)  # Step by step execution steps
+    execution_plan = Column(
+        JSON, default=dict, nullable=False
+    )  # Step by step execution steps
 
     workspace = relationship("Workspace")
 
@@ -64,14 +84,24 @@ class PlanningItem(BaseEntity):
     type = Column(String(50), nullable=False)  # Epic, Feature, UserStory, Task, Subtask
     title = Column(String(255), nullable=False)
     description = Column(String(4096), nullable=True)
-    status = Column(String(50), default="Todo", nullable=False)  # Todo, In Progress, Blocked, Done
-    priority = Column(String(50), default="Medium", nullable=False)  # Critical, High, Medium, Low
+    status = Column(
+        String(50), default="Todo", nullable=False
+    )  # Todo, In Progress, Blocked, Done
+    priority = Column(
+        String(50), default="Medium", nullable=False
+    )  # Critical, High, Medium, Low
     estimated_hours = Column(Float, default=0.0, nullable=False)
-    assigned_roles = Column(JSON, default=list, nullable=False)  # e.g., ["Frontend", "Backend"]
-    metadata_fields = Column(JSON, default=dict, nullable=False)  # e.g., acceptance criteria
+    assigned_roles = Column(
+        JSON, default=list, nullable=False
+    )  # e.g., ["Frontend", "Backend"]
+    metadata_fields = Column(
+        JSON, default=dict, nullable=False
+    )  # e.g., acceptance criteria
 
     # Self-referential relationship
-    parent = relationship("PlanningItem", remote_side="PlanningItem.id", backref="children")
+    parent = relationship(
+        "PlanningItem", remote_side="PlanningItem.id", backref="children"
+    )
     workspace = relationship("Workspace")
     project = relationship("Project")
 
@@ -94,7 +124,9 @@ class PlanningDependency(BaseEntity):
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=False,
     )
-    dependency_type = Column(String(50), default="Blocker", nullable=False)  # Blocker, API, Database, Infrastructure, Task
+    dependency_type = Column(
+        String(50), default="Blocker", nullable=False
+    )  # Blocker, API, Database, Infrastructure, Task
 
     workspace = relationship("Workspace")
     source_item = relationship("PlanningItem", foreign_keys=[source_item_id])
@@ -112,7 +144,9 @@ class ExecutionQueueItem(BaseEntity):
     task_name = Column(String(255), nullable=False)
     payload = Column(JSON, default=dict, nullable=False)
     priority = Column(Integer, default=0, nullable=False)  # Higher is higher priority
-    status = Column(String(50), default="Pending", nullable=False)  # Pending, Running, Succeeded, Failed, Delayed
+    status = Column(
+        String(50), default="Pending", nullable=False
+    )  # Pending, Running, Succeeded, Failed, Delayed
     retry_count = Column(Integer, default=0, nullable=False)
     max_retries = Column(Integer, default=3, nullable=False)
     scheduled_at = Column(DateTime, nullable=False)

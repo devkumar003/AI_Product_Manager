@@ -1,5 +1,4 @@
-import time
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
@@ -22,7 +21,7 @@ def get_health():
 def get_readiness(db: Session = Depends(get_db)):
     global REQUEST_COUNTER
     REQUEST_COUNTER += 1
-    
+
     # Check Database connection
     db_ok = False
     try:
@@ -57,7 +56,7 @@ def get_metrics(db: Session = Depends(get_db)):
     Exposes Prometheus-formatted metrics about application requests and databases.
     """
     global REQUEST_COUNTER
-    
+
     # 1. DB ping
     db_ok = 1
     try:

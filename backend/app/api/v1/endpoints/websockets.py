@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger("app.websockets")
@@ -16,14 +16,16 @@ class WorkspaceConnectionManager:
 
     def __init__(self):
         # Maps workspace_id -> list of active WebSocket connections
-        self.active_connections: Dict[str, List[WebSocket]] = {}
+        self.active_connections: dict[str, list[WebSocket]] = {}
 
     async def connect(self, workspace_id: str, websocket: WebSocket):
         await websocket.accept()
         if workspace_id not in self.active_connections:
             self.active_connections[workspace_id] = []
         self.active_connections[workspace_id].append(websocket)
-        logger.info(f"WebSocket connected to workspace {workspace_id}. Total: {len(self.active_connections[workspace_id])}")
+        logger.info(
+            f"WebSocket connected to workspace {workspace_id}. Total: {len(self.active_connections[workspace_id])}"
+        )
 
     def disconnect(self, workspace_id: str, websocket: WebSocket):
         if workspace_id in self.active_connections:

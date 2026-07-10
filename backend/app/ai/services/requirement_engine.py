@@ -5,10 +5,11 @@ Task 6 — PRD Generator
 """
 
 from typing import Any
+
 from pydantic import BaseModel, Field
 
-
 # ── Task 4: Requirement Generator ──
+
 
 class RequirementInput(BaseModel):
     product_discovery: str = Field(..., description="Product discovery output")
@@ -41,8 +42,11 @@ REQUIREMENT_PROMPT = (
 
 # ── Task 5: User Story Generator ──
 
+
 class UserStoryInput(BaseModel):
-    requirements: str = Field(..., description="Requirements output for story decomposition")
+    requirements: str = Field(
+        ..., description="Requirements output for story decomposition"
+    )
 
 
 class UserStory(BaseModel):
@@ -77,6 +81,7 @@ USER_STORY_PROMPT = (
 
 
 # ── Task 6: PRD Generator ──
+
 
 class PRDInput(BaseModel):
     idea: str = Field(..., description="Product idea")

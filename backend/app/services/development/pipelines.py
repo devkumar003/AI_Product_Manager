@@ -1,20 +1,23 @@
 import logging
-import uuid
 from uuid import UUID
+
 from sqlalchemy.orm import Session
-from datetime import datetime
-from typing import Optional, Dict, Any
 
 from app.models.development import GeneratedCodeFile
-from app.services.ai.llm_manager import llm_manager
 from app.services.ai.agents.base import AgentConfig
+from app.services.ai.llm_manager import llm_manager
 
 logger = logging.getLogger("app.services.development.pipelines")
 
 
 class DevelopmentPipelines:
     def run_prd_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Automatic PRD Generation Pipeline.
@@ -26,13 +29,13 @@ class DevelopmentPipelines:
             f"Instructions: {prompt}\n\n"
             f"Include sections for Product Overview, User Personas, Agile User Stories, Functional Requirements, and Non-Functional constraints."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.3)
+            config=AgentConfig(temperature=0.3),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -40,7 +43,7 @@ class DevelopmentPipelines:
             file_type="PRD",
             content=response.content,
             language="Markdown",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -48,7 +51,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_requirement_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Requirement Analysis Pipeline.
@@ -60,13 +68,13 @@ class DevelopmentPipelines:
             f"Product Scope: {prompt}\n\n"
             f"Provide list of User Requirements, System Requirements, API Requirements, Security Requirements, and a Traceability Matrix mapping user demands to technical implementations."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -74,7 +82,7 @@ class DevelopmentPipelines:
             file_type="RequirementAnalysis",
             content=response.content,
             language="Markdown",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -82,7 +90,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_architecture_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Architecture Generation Pipeline.
@@ -94,13 +107,13 @@ class DevelopmentPipelines:
             f"Requirements Details: {prompt}\n\n"
             f"Include high level block structure, design patterns used, microservice interactions, infrastructure flow, and security layers."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -108,7 +121,7 @@ class DevelopmentPipelines:
             file_type="Architecture",
             content=response.content,
             language="Markdown",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -116,7 +129,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_database_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Database Schema Generation Pipeline.
@@ -128,13 +146,13 @@ class DevelopmentPipelines:
             f"Context: {prompt}\n\n"
             f"Include CREATE TABLE statements, primary keys, foreign keys, constraints, indexes, triggers, and mock data insertion scripts."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.1)
+            config=AgentConfig(temperature=0.1),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -142,7 +160,7 @@ class DevelopmentPipelines:
             file_type="Database",
             content=response.content,
             language="SQL",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -150,7 +168,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_backend_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Backend Code Generation Pipeline.
@@ -162,13 +185,13 @@ class DevelopmentPipelines:
             f"Requirements: {prompt}\n\n"
             f"Ensure proper Pydantic schemas, dependency injection DB sessions, and structured error responses. Include comments."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -176,7 +199,7 @@ class DevelopmentPipelines:
             file_type="Backend",
             content=response.content,
             language="Python",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -184,25 +207,32 @@ class DevelopmentPipelines:
         return code_file
 
     def run_frontend_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         Frontend Code Generation Pipeline.
         """
-        logger.info(f"Running Frontend React components generation pipeline for: {target_name}")
+        logger.info(
+            f"Running Frontend React components generation pipeline for: {target_name}"
+        )
         system_prompt = "You are an Expert React / Next.js and Tailwind CSS developer. Generate gorgeous, responsive TSX views."
         llm_prompt = (
             f"Build a React Next.js page component for '{target_name}':\n"
             f"Interface Goals: {prompt}\n\n"
             f"Include React state hooks, Lucide icons, responsive Tailwind grids, hover effect micro-animations, and descriptive labels. Ensure clean imports."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -210,7 +240,7 @@ class DevelopmentPipelines:
             file_type="Frontend",
             content=response.content,
             language="TypeScript",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -218,7 +248,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_api_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, prompt: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        prompt: str,
     ) -> GeneratedCodeFile:
         """
         API Interface / Endpoint Generation Pipeline.
@@ -230,13 +265,13 @@ class DevelopmentPipelines:
             f"Details: {prompt}\n\n"
             f"Ensure accurate path parameters, query params, JSON request/response schema structures, and HTTP error codes."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.1)
+            config=AgentConfig(temperature=0.1),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -244,7 +279,7 @@ class DevelopmentPipelines:
             file_type="API",
             content=response.content,
             language="YAML",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -252,7 +287,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_unit_test_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, code_content: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        code_content: str,
     ) -> GeneratedCodeFile:
         """
         Unit Test Generation Module (generation only, do not execute).
@@ -264,13 +304,13 @@ class DevelopmentPipelines:
             f"```python\n{code_content}\n```\n\n"
             f"Include positive, negative, validation, and boundary conditions. Mock any database or external client dependencies."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -278,7 +318,7 @@ class DevelopmentPipelines:
             file_type="UnitTestCase",
             content=response.content,
             language="Python",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -286,7 +326,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_integration_test_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, api_endpoints: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        api_endpoints: str,
     ) -> GeneratedCodeFile:
         """
         Integration Test Generation Module (generation only, do not execute).
@@ -298,13 +343,13 @@ class DevelopmentPipelines:
             f"Endpoints description: {api_endpoints}\n\n"
             f"Ensure test flows call endpoints sequentially (e.g. Create -> Read -> Update -> Delete) and verify status codes and JSON payload contents."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -312,7 +357,7 @@ class DevelopmentPipelines:
             file_type="IntegrationTestCase",
             content=response.content,
             language="Python",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()
@@ -320,7 +365,12 @@ class DevelopmentPipelines:
         return code_file
 
     def run_documentation_pipeline(
-        self, db: Session, workspace_id: UUID, project_id: Optional[UUID], target_name: str, context: str
+        self,
+        db: Session,
+        workspace_id: UUID,
+        project_id: UUID | None,
+        target_name: str,
+        context: str,
     ) -> GeneratedCodeFile:
         """
         Documentation Generation Pipeline.
@@ -332,13 +382,13 @@ class DevelopmentPipelines:
             f"Context: {context}\n\n"
             f"Include an Introduction, Setup Guide, API Reference, Database structure, and Troubleshooting tips."
         )
-        
+
         response = llm_manager.generate_sync(
             prompt=llm_prompt,
             system_prompt=system_prompt,
-            config=AgentConfig(temperature=0.2)
+            config=AgentConfig(temperature=0.2),
         )
-        
+
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
@@ -346,7 +396,7 @@ class DevelopmentPipelines:
             file_type="Documentation",
             content=response.content,
             language="Markdown",
-            is_merged=False
+            is_merged=False,
         )
         db.add(code_file)
         db.commit()

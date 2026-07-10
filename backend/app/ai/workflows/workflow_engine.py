@@ -1,5 +1,7 @@
 import abc
-from typing import Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -34,7 +36,9 @@ class ActionStep(WorkflowStep):
     """
 
     def __init__(
-        self, name: str, handler: Callable[[WorkflowContext], Coroutine[Any, Any, WorkflowContext]]
+        self,
+        name: str,
+        handler: Callable[[WorkflowContext], Coroutine[Any, Any, WorkflowContext]],
     ) -> None:
         super().__init__(name)
         self.handler = handler
@@ -62,7 +66,9 @@ class DecisionNode(WorkflowStep):
 
     async def run(self, context: WorkflowContext) -> WorkflowContext:
         decision = self.condition(context)
-        context.telemetry.append({"step": self.name, "branch_taken": "true" if decision else "false"})
+        context.telemetry.append(
+            {"step": self.name, "branch_taken": "true" if decision else "false"}
+        )
         if decision:
             return await self.true_step.run(context)
         return await self.false_step.run(context)
@@ -83,7 +89,7 @@ class WorkflowEngine:
     async def execute(self, context: WorkflowContext) -> WorkflowContext:
         """Run all steps sequentially, accumulating outputs and logging timeline trace."""
         context.telemetry.append({"workflow": self.name, "event": "execution_started"})
-        
+
         for step in self.steps:
             try:
                 context = await step.run(context)
@@ -91,5 +97,7 @@ class WorkflowEngine:
                 context.telemetry.append({"step": step.name, "error": str(e)})
                 raise e
 
-        context.telemetry.append({"workflow": self.name, "event": "execution_completed"})
+        context.telemetry.append(
+            {"workflow": self.name, "event": "execution_completed"}
+        )
         return context

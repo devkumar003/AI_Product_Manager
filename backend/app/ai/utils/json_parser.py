@@ -28,7 +28,9 @@ def extract_json_from_text(text: Any) -> Any:
     # 2. Strip markdown code fences if present
     if "```" in cleaned:
         # Match inside ```json ... ``` or ``` ... ```
-        fence_pattern = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
+        fence_pattern = re.compile(
+            r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE
+        )
         matches = fence_pattern.findall(cleaned)
         for match in matches:
             try:
@@ -69,7 +71,9 @@ def extract_json_from_text(text: Any) -> Any:
             except json.JSONDecodeError:
                 raise e
 
-    raise ValueError(f"Could not extract valid JSON from LLM response: {cleaned[:200]}...")
+    raise ValueError(
+        f"Could not extract valid JSON from LLM response: {cleaned[:200]}..."
+    )
 
 
 async def generate_with_json_healing(
@@ -92,14 +96,18 @@ async def generate_with_json_healing(
             return extract_json_from_text(content)
         except (json.JSONDecodeError, ValueError) as e:
             if attempt == max_retries:
-                logger.error(f"JSON self-healing failed after {max_retries} retries: {str(e)}")
+                logger.error(
+                    f"JSON self-healing failed after {max_retries} retries: {str(e)}"
+                )
                 raise e
 
             logger.warning(
                 f"JSON decode failed on attempt {attempt + 1}: {str(e)}. Initiating self-healing repair prompt..."
             )
             # Add error feedback to message chain for repair
-            content_val = res.content if 'res' in locals() and hasattr(res, "content") else ""
+            content_val = (
+                res.content if "res" in locals() and hasattr(res, "content") else ""
+            )
             current_messages.append({"role": "assistant", "content": content_val})
             current_messages.append(
                 {

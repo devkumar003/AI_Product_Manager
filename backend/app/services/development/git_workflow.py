@@ -1,20 +1,24 @@
-import logging
-import uuid
 import hashlib
-from uuid import UUID
-from sqlalchemy.orm import Session
+import logging
 from datetime import datetime
+from uuid import UUID
+
+from sqlalchemy.orm import Session
 
 from app.models.development import GitBranch, GitCommit, GitPullRequest
-from app.services.ai.llm_manager import llm_manager
 from app.services.ai.agents.base import AgentConfig
+from app.services.ai.llm_manager import llm_manager
 
 logger = logging.getLogger("app.services.development.git_workflow")
 
 
 class GitWorkflow:
     def create_branch(
-        self, db: Session, workspace_id: UUID, branch_name: str, source_branch: str = "main"
+        self,
+        db: Session,
+        workspace_id: UUID,
+        branch_name: str,
+        source_branch: str = "main",
     ) -> GitBranch:
         """
         Creates a Git branch inside the Workspace simulation environment.
@@ -24,7 +28,7 @@ class GitWorkflow:
             workspace_id=workspace_id,
             branch_name=branch_name,
             source_branch=source_branch,
-            status="Active"
+            status="Active",
         )
         db.add(branch)
         db.commit()
@@ -32,21 +36,23 @@ class GitWorkflow:
         return branch
 
     def commit_changes(
-        self, 
-        db: Session, 
-        workspace_id: UUID, 
-        branch_id: UUID, 
-        commit_message: str, 
-        files_changed: list[str]
+        self,
+        db: Session,
+        workspace_id: UUID,
+        branch_id: UUID,
+        commit_message: str,
+        files_changed: list[str],
     ) -> GitCommit:
         """
         Records a Git commit in the workspace context database.
         """
         logger.info(f"Recording commit on branch: {branch_id}")
-        
+
         # Calculate mock hash
         sha = hashlib.sha1()
-        sha.update(f"{branch_id}-{commit_message}-{datetime.utcnow().isoformat()}".encode('utf-8'))
+        sha.update(
+            f"{branch_id}-{commit_message}-{datetime.utcnow().isoformat()}".encode()
+        )
         commit_hash = sha.hexdigest()
 
         commit = GitCommit(
@@ -55,7 +61,7 @@ class GitWorkflow:
             commit_hash=commit_hash,
             commit_message=commit_message,
             author="AI Developer Agent",
-            files_changed=files_changed
+            files_changed=files_changed,
         )
         db.add(commit)
         db.commit()
@@ -69,7 +75,7 @@ class GitWorkflow:
         title: str,
         description: str,
         source_branch: str,
-        target_branch: str = "main"
+        target_branch: str = "main",
     ) -> GitPullRequest:
         """
         Creates a pull request and queries the LLM for merge recommendations/suggestions.
@@ -88,7 +94,7 @@ class GitWorkflow:
             res = llm_manager.generate_sync(
                 prompt=llm_prompt,
                 system_prompt=system_prompt,
-                config=AgentConfig(temperature=0.1)
+                config=AgentConfig(temperature=0.1),
             )
             content = res.content.lower()
             if "conflict" in content:
@@ -107,18 +113,23 @@ class GitWorkflow:
             source_branch=source_branch,
             target_branch=target_branch,
             status="Open",
-            merge_recommendation=recommendation
+            merge_recommendation=recommendation,
         )
         db.add(pr)
         db.commit()
         db.refresh(pr)
         return pr
 
-    def merge_pull_request(self, db: Session, workspace_id: UUID, pr_id: UUID) -> GitPullRequest | None:
-        pr = db.query(GitPullRequest).filter(
-            GitPullRequest.id == pr_id, 
-            GitPullRequest.workspace_id == workspace_id
-        ).first()
+    def merge_pull_request(
+        self, db: Session, workspace_id: UUID, pr_id: UUID
+    ) -> GitPullRequest | None:
+        pr = (
+            db.query(GitPullRequest)
+            .filter(
+                GitPullRequest.id == pr_id, GitPullRequest.workspace_id == workspace_id
+            )
+            .first()
+        )
         if pr:
             pr.status = "Merged"
             db.commit()

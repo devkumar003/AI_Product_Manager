@@ -1,10 +1,13 @@
 from pydantic import BaseModel, Field
+
 from app.ai.agents.base import BaseAgent
 from app.ai.schemas import AgentResponse
 
 
 class APIArchitectInput(BaseModel):
-    entities_definition: str = Field(..., description="DB entity lists or architecture summaries")
+    entities_definition: str = Field(
+        ..., description="DB entity lists or architecture summaries"
+    )
 
 
 class APIArchitect(BaseAgent[APIArchitectInput, AgentResponse]):
