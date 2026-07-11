@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AppShell } from '@/components/layout/shell';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
 
 interface AgentInfo {
   name: string;
@@ -90,21 +92,28 @@ export default function AgentDashboardPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-100">Agent Dashboard</h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              {AGENT_CATALOG.length} agents registered &middot; All systems operational
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-              Registry Online
-            </span>
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="space-y-6"
+      >
+        {/* Breadcrumbs & Header */}
+        <div>
+          <Breadcrumb items={[{ label: 'Home', href: '/dashboard' }, { label: 'AI Hub', href: '/dashboard/ai-dashboard' }, { label: 'Agent Registry' }]} />
+          <div className="flex items-center justify-between mt-2">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white">24-Agent Catalog & Registry</h1>
+              <p className="text-sm text-zinc-400 mt-1">
+                {AGENT_CATALOG.length} autonomous agents operational &middot; Multi-agent orchestrator ready
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3.5 py-1.5">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                Registry Online
+              </span>
+            </div>
           </div>
         </div>
 
@@ -112,13 +121,13 @@ export default function AgentDashboardPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+            className={`text-xs px-3.5 py-2 rounded-xl font-bold border transition-all duration-200 ${
               !selectedCategory
-                ? 'bg-zinc-700/60 border-zinc-600 text-zinc-100'
-                : 'bg-zinc-900/40 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
+                ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 shadow-sm'
+                : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
             }`}
           >
-            All ({AGENT_CATALOG.length})
+            All Categories ({AGENT_CATALOG.length})
           </button>
           {CATEGORIES.map(cat => {
             const count = AGENT_CATALOG.filter(a => a.category === cat).length;
@@ -126,10 +135,10 @@ export default function AgentDashboardPage() {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                className={`text-xs px-3.5 py-2 rounded-xl font-bold border transition-all duration-200 ${
                   selectedCategory === cat
-                    ? 'bg-zinc-700/60 border-zinc-600 text-zinc-100'
-                    : 'bg-zinc-900/40 border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700'
+                    ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-300 shadow-sm'
+                    : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
                 }`}
               >
                 {cat} ({count})
@@ -139,74 +148,97 @@ export default function AgentDashboardPage() {
         </div>
 
         {/* Main Layout: Agent Grid + Sidebar */}
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
 
           {/* Agent Cards Grid */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredAgents.map(agent => (
-              <button
-                key={agent.name}
-                onClick={() => setSelectedAgent(agent)}
-                className={`text-left p-4 rounded-xl border transition-all duration-200 hover:scale-[1.01] ${
-                  selectedAgent?.name === agent.name
-                    ? 'border-indigo-500/40 bg-indigo-500/5 ring-1 ring-indigo-500/20'
-                    : `${CATEGORY_COLORS[agent.category]} hover:bg-zinc-800/30`
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <span className="text-2xl">{agent.icon}</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
-                    <span className="text-[10px] text-zinc-500 font-mono">v{agent.version}</span>
+          <motion.div layout className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <AnimatePresence mode="popLayout">
+              {filteredAgents.map(agent => (
+                <motion.button
+                  layout
+                  key={agent.name}
+                  initial={{ opacity: 0, scale: 0.94 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.94 }}
+                  transition={{ duration: 0.22 }}
+                  onClick={() => setSelectedAgent(agent)}
+                  className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:scale-[1.02] ${
+                    selectedAgent?.name === agent.name
+                      ? 'border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/30 shadow-lg'
+                      : `${CATEGORY_COLORS[agent.category]} hover:bg-zinc-800/40`
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-2xl">{agent.icon}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
+                      <span className="text-[10px] text-zinc-400 font-mono">v{agent.version}</span>
+                    </div>
                   </div>
-                </div>
-                <h3 className="text-sm font-semibold text-zinc-200 mb-1">{agent.displayName}</h3>
-                <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">{agent.description}</p>
-                <div className="mt-3">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_TAG_COLORS[agent.category]}`}>
-                    {agent.category}
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+                  <h3 className="text-sm font-bold text-white mb-1">{agent.displayName}</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">{agent.description}</p>
+                  <div className="mt-3.5 flex items-center justify-between">
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${CATEGORY_TAG_COLORS[agent.category]}`}>
+                      {agent.category}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-medium">Inspect Agent →</span>
+                  </div>
+                </motion.button>
+              ))}
+            </AnimatePresence>
+          </motion.div>
 
           {/* Agent Detail Sidebar */}
-          <div className="w-80 shrink-0 space-y-4">
+          <div className="w-full lg:w-80 shrink-0 space-y-4">
 
             {/* Selected Agent Detail */}
-            {selectedAgent ? (
-              <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{selectedAgent.icon}</span>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-100">{selectedAgent.displayName}</h3>
-                    <p className="text-[10px] text-zinc-500 font-mono">{selectedAgent.name} &middot; v{selectedAgent.version}</p>
+            <AnimatePresence mode="wait">
+              {selectedAgent ? (
+                <motion.div
+                  key={selectedAgent.name}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-5 rounded-2xl border border-indigo-500/30 bg-zinc-900/80 backdrop-blur-md space-y-4 shadow-xl"
+                >
+                  <div className="flex items-center gap-3 border-b border-zinc-800/80 pb-3">
+                    <span className="text-3xl p-2 rounded-xl bg-zinc-950 border border-zinc-800">{selectedAgent.icon}</span>
+                    <div>
+                      <h3 className="text-base font-extrabold text-white">{selectedAgent.displayName}</h3>
+                      <p className="text-[11px] text-indigo-400 font-mono font-bold">{selectedAgent.name} &middot; v{selectedAgent.version}</p>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">{selectedAgent.description}</p>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-500">Status</span>
-                    <span className="text-emerald-400 font-mono capitalize">{selectedAgent.status}</span>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{selectedAgent.description}</p>
+                  <div className="space-y-2.5 text-xs pt-1 border-t border-zinc-800/80">
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-400 font-medium">System Status</span>
+                      <span className="text-emerald-400 font-mono font-bold capitalize bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{selectedAgent.status}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-400 font-medium">Health Metrics</span>
+                      <span className="text-emerald-400 font-mono font-bold capitalize bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">{selectedAgent.health}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-zinc-400 font-medium">Functional Area</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${CATEGORY_TAG_COLORS[selectedAgent.category]}`}>
+                        {selectedAgent.category}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-500">Health</span>
-                    <span className="text-emerald-400 font-mono capitalize">{selectedAgent.health}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-500">Category</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] ${CATEGORY_TAG_COLORS[selectedAgent.category]}`}>
-                      {selectedAgent.category}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-900/30 text-center text-zinc-600 text-xs">
-                Select an agent to inspect
-              </div>
-            )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-8 rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/30 text-center text-zinc-500 text-xs font-medium"
+                >
+                  <div className="text-2xl mb-2">🤖</div>
+                  Select any agent card to inspect telemetry and execution scope
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Execution Timeline */}
             <div className="p-5 rounded-xl border border-zinc-800 bg-zinc-900/50 space-y-3">
@@ -253,7 +285,7 @@ export default function AgentDashboardPage() {
 
           </div>
         </div>
-      </div>
+      </motion.div>
     </AppShell>
   );
 }

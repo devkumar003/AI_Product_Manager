@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Plus, Search, Calendar, FolderPlus, Copy, Archive, RefreshCw, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import { AppShell } from '@/components/layout/shell';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
@@ -11,6 +12,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/comp
 import { Dialog } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@/lib/api';
+import { SkeletonGrid } from '@/components/ui/skeleton';
 
 interface ProjectItem {
   id: string;
@@ -112,7 +114,12 @@ export default function ProjectsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="space-y-6"
+      >
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div>
@@ -160,54 +167,62 @@ export default function ProjectsPage() {
 
             {/* Loading Indicator */}
             {isLoading ? (
-              <div className="flex items-center justify-center py-20 text-zinc-400 space-x-2">
-                <RefreshCw size={20} className="animate-spin" />
-                <span>Fetching roadmaps...</span>
-              </div>
+              <SkeletonGrid count={4} />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredProjects.map((project) => (
-                  <Card key={project.id} className="hover:border-zinc-800 hover:bg-zinc-950/60 transition duration-300 group">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                          project.status === 'Development' ? 'bg-indigo-950/30 border border-indigo-900/50 text-indigo-400' :
-                          project.status === 'Planning' ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-400' :
-                          project.status === 'Archived' ? 'bg-zinc-900 border border-zinc-800 text-zinc-400' :
-                          'bg-amber-950/30 border border-amber-900/50 text-amber-400'
-                        }`}>
-                          {project.status}
-                        </span>
-                        <div className="flex items-center text-xs text-zinc-500">
-                          <Calendar size={12} className="mr-1" /> {new Date(project.created_at).toLocaleDateString()}
+                {filteredProjects.map((project, idx) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.08 }}
+                  >
+                    <Card className="h-full flex flex-col justify-between hover:border-zinc-800 hover:bg-zinc-950/60 transition duration-300 group">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            project.status === 'Development' ? 'bg-indigo-950/30 border border-indigo-900/50 text-indigo-400' :
+                            project.status === 'Planning' ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-400' :
+                            project.status === 'Archived' ? 'bg-zinc-900 border border-zinc-800 text-zinc-400' :
+                            'bg-amber-950/30 border border-amber-900/50 text-amber-400'
+                          }`}>
+                            {project.status}
+                          </span>
+                          <div className="flex items-center text-xs text-zinc-500">
+                            <Calendar size={12} className="mr-1" /> {new Date(project.created_at).toLocaleDateString()}
+                          </div>
                         </div>
-                      </div>
-                      <CardTitle className="text-lg font-bold mt-2 text-white">{project.name}</CardTitle>
-                      <CardDescription className="text-zinc-400 text-sm mt-1">{project.description || 'No roadmap description provided.'}</CardDescription>
-                    </CardHeader>
-                    <CardFooter className="flex justify-between items-center text-xs border-zinc-900">
-                      <span className="text-zinc-500 font-mono">/{project.slug}</span>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={(e) => handleDuplicate(project.id, e)} title="Duplicate roadmap">
-                          <Copy size={12} />
-                        </Button>
-                        {!project.archived && (
-                          <Button variant="outline" size="sm" onClick={(e) => handleArchive(project.id, e)} title="Archive roadmap">
-                            <Archive size={12} />
+                        <CardTitle className="text-lg font-bold mt-2 text-white">{project.name}</CardTitle>
+                        <CardDescription className="text-zinc-400 text-sm mt-1">{project.description || 'No roadmap description provided.'}</CardDescription>
+                      </CardHeader>
+                      <CardFooter className="flex justify-between items-center text-xs border-zinc-900">
+                        <span className="text-zinc-500 font-mono">/{project.slug}</span>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm" onClick={(e) => handleDuplicate(project.id, e)} title="Duplicate roadmap">
+                            <Copy size={12} />
                           </Button>
-                        )}
-                        <Button variant="outline" size="sm" href={`/projects/${project.id}`}>
-                          Open Roadmap
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
+                          {!project.archived && (
+                            <Button variant="outline" size="sm" onClick={(e) => handleArchive(project.id, e)} title="Archive roadmap">
+                              <Archive size={12} />
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm" href={`/projects/${project.id}`}>
+                            Open Roadmap
+                          </Button>
+                        </div>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
                 ))}
                 {filteredProjects.length === 0 && (
-                  <div className="col-span-2 py-16 text-center text-zinc-500 bg-zinc-950/30 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center space-y-3">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="col-span-2 py-16 text-center text-zinc-500 bg-zinc-950/30 border border-dashed border-zinc-900 rounded-2xl flex flex-col items-center justify-center space-y-3"
+                  >
                     <FolderPlus size={36} className="text-zinc-700" />
                     <div>No projects found. Create a new one to start tracking.</div>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             )}
@@ -246,7 +261,7 @@ export default function ProjectsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                Priority level
+                Priority Level
               </label>
               <select
                 value={newPriority}
@@ -259,7 +274,7 @@ export default function ProjectsPage() {
                 <option value="Critical">Critical</option>
               </select>
             </div>
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex justify-end space-x-2 pt-4 border-t border-zinc-900/60 mt-6">
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
@@ -269,7 +284,7 @@ export default function ProjectsPage() {
             </div>
           </form>
         </Dialog>
-      </div>
+      </motion.div>
     </AppShell>
   );
 }

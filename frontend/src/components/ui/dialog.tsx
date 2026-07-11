@@ -8,6 +8,7 @@ export interface DialogProps {
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  showDefaultFooter?: boolean;
 }
 
 export const Dialog = ({
@@ -17,6 +18,7 @@ export const Dialog = ({
   description,
   children,
   footer,
+  showDefaultFooter = false,
 }: DialogProps) => {
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -72,16 +74,19 @@ export const Dialog = ({
 
         <div className="text-zinc-300">{children}</div>
 
-        <div className="mt-6 flex justify-end space-x-2 border-t border-zinc-900/50 pt-4">
-          {footer ? (
-            footer
-          ) : (
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          )}
-        </div>
+        {(footer !== undefined || showDefaultFooter) && (
+          <div className="mt-6 flex justify-end space-x-2 border-t border-zinc-900/50 pt-4">
+            {footer ? (
+              footer
+            ) : (
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

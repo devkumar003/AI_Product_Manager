@@ -19,6 +19,8 @@ import {
   Plug,
   Code2,
   Building2,
+  Cpu,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,6 +37,9 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const menuItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Projects', href: '/projects', icon: FolderKanban },
+    { name: 'AI Hub', href: '/dashboard/ai-dashboard', icon: Sparkles },
+    { name: 'AI Agents', href: '/dashboard/agents', icon: Cpu },
+    { name: 'AI Chat', href: '/dashboard/ai-chat', icon: MessageSquare },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Planning', href: '/dashboard/planning', icon: Calendar },
     { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
@@ -100,7 +105,7 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               <ChevronDown
                 size={14}
                 className={twMerge(
-                  'text-zinc-500 transition-transform duration-200',
+                  'text-zinc-500 transition-transform duration-200 shrink-0 ml-1',
                   dropdownOpen && 'rotate-180'
                 )}
               />
@@ -108,25 +113,25 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
           )}
         </button>
 
-        {/* Dropdown Popover */}
+        {/* Workspace Selector Dropdown */}
         {dropdownOpen && isOpen && (
-          <div className="absolute left-4 right-4 top-16 z-50 rounded-lg border border-zinc-800 bg-zinc-950 p-1 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-              Switch Workspace
+          <div className="absolute left-4 right-4 top-16 z-50 rounded-xl border border-zinc-800 bg-zinc-900/95 p-2 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="mb-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Switch Workspace ({workspaces.length})
             </div>
-            <div className="max-h-60 overflow-y-auto space-y-0.5">
+            <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
               {workspaces.map((ws) => (
                 <button
                   key={ws.id}
                   onClick={() => handleWorkspaceSelect(ws.id)}
                   className={twMerge(
-                    'flex w-full items-center space-x-2 rounded-md px-2 py-1.5 text-xs font-medium transition duration-150',
+                    'flex w-full items-center space-x-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors',
                     activeWorkspace?.id === ws.id
-                      ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
-                      : 'text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200 border border-transparent'
+                      ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold'
+                      : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-white'
                   )}
                 >
-                  <span
+                  <div
                     className="h-2 w-2 rounded-full shrink-0"
                     style={{ backgroundColor: ws.color || '#6366f1' }}
                   />
@@ -139,10 +144,16 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
       </div>
 
       {/* Menu Links */}
-      <nav className="flex-1 space-y-1 px-3 py-6">
+      <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isGeneratorRoute = pathname.includes('-generator') || pathname.includes('idea-analyzer') || pathname.includes('knowledge-base');
+          const isActive =
+            item.href === '/dashboard'
+              ? pathname === '/dashboard'
+              : item.href === '/dashboard/ai-dashboard'
+              ? pathname === '/dashboard/ai-dashboard' || isGeneratorRoute
+              : pathname.startsWith(item.href);
 
           return (
             <Link
@@ -151,14 +162,14 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               className={twMerge(
                 'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 relative',
                 isActive
-                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20'
+                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.12)]'
                   : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-100 border border-transparent'
               )}
             >
               <Icon
                 size={18}
                 className={twMerge(
-                  'transition duration-300',
+                  'transition duration-300 shrink-0',
                   isActive ? 'text-indigo-400' : 'text-zinc-400 group-hover:text-zinc-100',
                   isOpen ? 'mr-3' : 'mr-0'
                 )}

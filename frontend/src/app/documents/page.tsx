@@ -303,7 +303,7 @@ export default function DocumentsPage() {
               value={newTagsStr}
               onChange={(e) => setNewTagsStr(e.target.value)}
             />
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex justify-end space-x-2 pt-4 border-t border-zinc-900/60 mt-6">
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
