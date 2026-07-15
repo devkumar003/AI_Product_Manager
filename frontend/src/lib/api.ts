@@ -22,9 +22,14 @@ export const api: AxiosInstance = axios.create({
   timeout: 120000, // 120 seconds timeout for AI operations
 });
 
-// Auth Interceptor: No longer injects Authorization header from localStorage, relies on HttpOnly cookies
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error: AxiosError) => {
