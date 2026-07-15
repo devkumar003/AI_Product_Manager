@@ -11,6 +11,7 @@ class Workspace(BaseEntity):
         Uuid,
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     name = Column(String(255), nullable=False)
     description = Column(String(1024), nullable=True)

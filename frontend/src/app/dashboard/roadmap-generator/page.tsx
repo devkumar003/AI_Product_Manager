@@ -6,6 +6,8 @@ import { AppShell } from '@/components/layout/shell';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { AgentThoughtVisualizer, ThoughtStep } from '@/components/ui/agent-thought-visualizer';
 import { Sparkles, Calendar, Check, Copy, Download, Layers, Target, AlertTriangle, RefreshCw, GitCommit, ChevronRight, Award } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/lib/api';
 
 const INITIAL_STEPS: ThoughtStep[] = [
   {
@@ -13,40 +15,31 @@ const INITIAL_STEPS: ThoughtStep[] = [
     agentName: 'Feature Extraction Agent',
     roleIcon: 'brain',
     status: 'pending',
-    message: 'Parsing feature candidates, dependencies & architectural prerequisites...',
+    message: 'Analyzing product description & parsing list of core features...',
     timestamp: 'Just now',
-    details: ['Identifying core epics vs subtasks', 'Extracting cross-functional prerequisites'],
+    details: ['Parsing description syntax', 'Decomposing complex descriptions into discrete feature concepts'],
   },
   {
     id: '2',
-    agentName: 'Prioritization Engine Agent',
+    agentName: 'Feature Scorer Agent',
     roleIcon: 'cpu',
     status: 'pending',
-    message: 'Scoring features against selected prioritization framework...',
+    message: 'Scoring extracted features against selected prioritization framework...',
     timestamp: 'Waiting...',
-    details: ['Computing reach, impact, confidence & effort ratios', 'Enforcing strategic ROI thresholds'],
+    details: ['Mapping feature values to framework categories (Reach, Impact, Confidence, Effort)', 'Generating mathematical score aggregates'],
   },
   {
     id: '3',
-    agentName: 'Capacity & Sprint Allocation Agent',
-    roleIcon: 'layers',
+    agentName: 'Dependency & Risk Agent',
+    roleIcon: 'shield',
     status: 'pending',
-    message: 'Mapping engineering capacity, team velocity & quarterly boundaries...',
+    message: 'Identifying technical dependencies, blocking paths & execution risks...',
     timestamp: 'Waiting...',
-    details: ['Balancing frontend vs backend workload across sprints', 'Allocating 20% capacity for tech debt'],
+    details: ['Detecting database-to-API blockers', 'Synthesizing mitigation playbooks'],
   },
   {
     id: '4',
-    agentName: 'Risk & Dependency Agent',
-    roleIcon: 'shield',
-    status: 'pending',
-    message: 'Identifying cross-team blockers, technical debt & timeline risks...',
-    timestamp: 'Waiting...',
-    details: ['Checking external third-party API dependencies', 'Flagging critical path bottlenecks'],
-  },
-  {
-    id: '5',
-    agentName: 'Milestone Assembly Agent',
+    agentName: 'Strategic Planning Agent',
     roleIcon: 'git',
     status: 'pending',
     message: 'Synthesizing interactive quarterly roadmap with milestone badges...',
@@ -56,9 +49,11 @@ const INITIAL_STEPS: ThoughtStep[] = [
 ];
 
 export default function RoadmapGeneratorPage() {
+  const { activeWorkspace } = useAuth();
   const [features, setFeatures] = React.useState('');
   const [framework, setFramework] = React.useState('RICE');
   const [result, setResult] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [steps, setSteps] = React.useState<ThoughtStep[]>(INITIAL_STEPS);
   const [activeTab, setActiveTab] = React.useState<'timeline' | 'matrix' | 'risks' | 'raw'>('timeline');
@@ -88,88 +83,65 @@ export default function RoadmapGeneratorPage() {
   };
 
   const handleGenerate = async () => {
-    if (!features.trim()) return;
+    if (!activeWorkspace || !features.trim()) return;
     setLoading(true);
     setResult(null);
+    setError(null);
     setActiveTab('timeline');
 
     const progressPromise = simulateProgress();
 
     try {
-      const res = await fetch('/api/v1/ai/workflows/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflow_name: 'roadmap_planning', context: { idea: features, features, framework } }),
+      const data = await apiService.post<any>('/ai/workflows/execute', {
+        workflow_name: 'roadmap_planning',
+        workspace_id: activeWorkspace.id,
+        context: { idea: features, features, framework },
       });
-      await progressPromise;
-      if (res.ok) {
-        const data = await res.json();
-        setResult(data.result || data);
-      } else {
-        throw new Error('Fallback triggered');
+      const rawResult = data.result || data;
+      const roadmap = rawResult.roadmap || {};
+      const prioritization = rawResult.prioritization || {};
+      
+      const mapped = {
+        title: activeWorkspace.name + ' Product Roadmap',
+        overview: roadmap.vision_roadmap || 'Roadmap strategy overview.',
+        timeline: (roadmap.quarterly_roadmap || []).map((q: any) => ({
+          quarter: q.quarter || q.name || 'Q1',
+          status: q.status || 'Planned',
+          badgeColor: q.status === 'In Progress' ? 'bg-emerald-950 border-emerald-900/50 text-emerald-400' : 'bg-zinc-800 border-zinc-700 text-zinc-300',
+          theme: q.theme || 'Focus Theme',
+          milestones: (q.milestones || []).map((m: any) => ({
+            priority: m.priority || 'Medium',
+            effort: m.effort || 'Medium',
+            name: m.name || m.title || 'Milestone Item',
+            deliverable: m.deliverable || m.description || ''
+          }))
+        })),
+        prioritizationMatrix: (prioritization.ranked_features || []).map((f: any, idx: number) => ({
+          rank: idx + 1,
+          feature: f.feature_name || 'Feature',
+          reach: f.framework_breakdown?.reach || 'High',
+          impact: f.framework_breakdown?.impact || 'Medium',
+          confidence: f.framework_breakdown?.confidence || 'High',
+          effort: f.framework_breakdown?.effort || 'Low',
+          score: f.score || 0
+        })),
+        risksAndBlockers: (roadmap.dependencies || []).map((d: any) => ({
+          title: d.dependency || d.title || 'Dependency',
+          severity: d.severity || 'Medium',
+          mitigation: d.mitigation || 'Proactive cross-team alignment.'
+        }))
+      };
+      if (mapped.risksAndBlockers.length === 0) {
+        mapped.risksAndBlockers = [
+          { title: 'API Integration latency', severity: 'Medium', mitigation: 'Optimize caching layer and use pre-fetching mechanisms.' },
+          { title: 'Resource contention', severity: 'High', mitigation: 'Cross-functional scoping and prioritization of must-haves.' }
+        ];
       }
-    } catch (e) {
       await progressPromise;
-      // Fallback structured Roadmap so users can test & inspect immediately even if offline
-      setResult({
-        title: `Strategic ${framework} Roadmap: ${features.slice(0, 35)}...`,
-        overview: `Comprehensive multi-quarter release timeline and feature prioritization matrix synthesized by AI ProductOS Planning Swarm using the ${framework} framework. Aligned with enterprise growth targets and engineering throughput.`,
-        timeline: [
-          {
-            quarter: 'Q1 2026',
-            theme: 'Core Infrastructure & Real-Time Multi-Agent Foundations',
-            status: 'In Progress',
-            badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-            milestones: [
-              { name: 'WebSocket Telemetry & Thought Visualizer Engine', priority: 'P0', effort: '3 Sprints', deliverable: 'Sub-50ms live SSE / WebSocket event stream broadcasting agent execution steps.' },
-              { name: 'AppShell Unified Navigation & Workspace Switcher', priority: 'P0', effort: '2 Sprints', deliverable: 'Seamless client-side layout persistence across 24 agent modules.' },
-              { name: 'PostgreSQL pgvector Schema Migration', priority: 'P1', effort: '2 Sprints', deliverable: 'Vector database indexes ready for Knowledge Base RAG embeddings.' }
-            ]
-          },
-          {
-            quarter: 'Q2 2026',
-            theme: 'Autonomous Multi-Agent Studio & Generator Suite',
-            status: 'Planned',
-            badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-            milestones: [
-              { name: 'PRD & Architecture Generator Swarms', priority: 'P0', effort: '4 Sprints', deliverable: 'Interactive multi-tab specifications with instant Markdown/JSON exports.' },
-              { name: 'Self-Healing JSON Schema Validator Loop', priority: 'P1', effort: '2 Sprints', deliverable: 'Automated retry and repair of malformed LLM outputs before client delivery.' },
-              { name: 'Idea Analyzer & Competitor Benchmarking', priority: 'P1', effort: '3 Sprints', deliverable: 'Real-time web search integration for SWOT and market sizing calculations.' }
-            ]
-          },
-          {
-            quarter: 'Q3 2026',
-            theme: 'Enterprise FinOps, RBAC & SOC2 Compliance',
-            status: 'Roadmap',
-            badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-            milestones: [
-              { name: 'Granular Token Consumption & Latency Attribution', priority: 'P1', effort: '3 Sprints', deliverable: 'Per-workspace cost tracking dashboard with budget alerts and throttling.' },
-              { name: 'Role-Based Access Control (RBAC) & Audit Logs', priority: 'P1', effort: '3 Sprints', deliverable: 'Enterprise governance boundaries for sensitive executive agent prompts.' }
-            ]
-          },
-          {
-            quarter: 'Q4 2026',
-            theme: 'Autonomous Code & PR Execution Engine',
-            status: 'Future Vision',
-            badgeColor: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
-            milestones: [
-              { name: 'GitHub Action Multi-Agent Code Repair Swarm', priority: 'P2', effort: '5 Sprints', deliverable: 'Agents directly read failed CI build logs and submit patch branches.' },
-              { name: 'Custom Workspace Agent Fine-Tuning Studio', priority: 'P2', effort: '4 Sprints', deliverable: 'Fine-tune domain-specific agents on internal corporate documentation.' }
-            ]
-          }
-        ],
-        prioritizationMatrix: [
-          { feature: 'WebSocket Thought Visualizer', score: '94 / 100', rank: '#1 (Must Have)', reach: '100% of users', impact: '3x Engagement', confidence: '98%', effort: 'M (3 wks)' },
-          { feature: 'Multi-Tab Generator Export Suite', score: '89 / 100', rank: '#2 (Must Have)', reach: '90% of users', impact: '2.5x Utility', confidence: '95%', effort: 'M (2 wks)' },
-          { feature: 'Granular FinOps Cost Dashboard', score: '82 / 100', rank: '#3 (Should Have)', reach: '40% (Admins)', impact: 'High Cost Control', confidence: '92%', effort: 'L (4 wks)' },
-          { feature: 'Custom Agent Fine-Tuning Studio', score: '74 / 100', rank: '#4 (Nice to Have)', reach: '15% (Enterprise)', impact: 'Strategic Moat', confidence: '85%', effort: 'XL (6 wks)' }
-        ],
-        risksAndBlockers: [
-          { title: 'LLM Provider Rate Limiting & Latency Spikes', severity: 'High', mitigation: 'Implement multi-provider fallback routing (OpenAI → Anthropic → Google) and local response caching.' },
-          { title: 'Complex Multi-Agent Context Window Overflow', severity: 'Medium', mitigation: 'Summarize intermediate agent outputs and pass structured JSON state artifacts instead of raw chat histories.' },
-          { title: 'Frontend Animation Frame Drops under High WebSocket Frequency', severity: 'Low', mitigation: 'Batch SSE/WebSocket updates using React transitions and requestAnimationFrame throttling.' }
-        ]
-      });
+      setResult(mapped);
+    } catch (e: any) {
+      await progressPromise;
+      setError(e.message || 'An error occurred during roadmap planning');
     } finally {
       setLoading(false);
     }
@@ -192,6 +164,18 @@ export default function RoadmapGeneratorPage() {
     a.download = `Roadmap_Specification_${Date.now()}.json`;
     a.click();
   };
+
+  if (!activeWorkspace) {
+    return (
+      <AppShell>
+        <div className="text-center py-20">
+          <Target className="mx-auto text-zinc-600 mb-4 animate-bounce" size={48} />
+          <h2 className="text-xl font-bold text-white">Select a Workspace</h2>
+          <p className="text-zinc-400 text-sm mt-2">Choose or create a workspace to view your autonomous roadmap studio.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -233,6 +217,12 @@ export default function RoadmapGeneratorPage() {
             )}
           </div>
         </div>
+
+        {error && (
+          <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-4 text-rose-300 text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Input Card & Framework Selection */}
         <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 backdrop-blur-md space-y-4">

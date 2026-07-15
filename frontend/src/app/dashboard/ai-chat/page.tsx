@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { AppShell } from '@/components/layout/shell';
+import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/lib/api';
+import { Target } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -20,7 +23,8 @@ interface ModelOption {
 }
 
 export default function AIChatPage() {
-  const [selectedModel, setSelectedModel] = React.useState('gpt-4o');
+  const { activeWorkspace } = useAuth();
+  const [selectedModel, setSelectedModel] = React.useState('gemini-1-5');
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isAgentPanelOpen, setIsAgentPanelOpen] = React.useState(true);
   const [messages, setMessages] = React.useState<Message[]>([
@@ -31,68 +35,94 @@ export default function AIChatPage() {
       timestamp: '10:45 AM',
       tokens: 45,
       cost: 0.000675
-    },
-    {
-      id: '2',
-      sender: 'user',
-      content: 'I want to build a real-time collaborate workspace for product designers.',
-      timestamp: '10:46 AM'
-    },
-    {
-      id: '3',
-      sender: 'assistant',
-      content: 'Understood. A collaborative canvas workspace requires: \n\n```json\n{\n  "realtime_engine": "WebSockets / Yjs CRDTs",\n  "database": "PostgreSQL + Redis for ephemeral presence",\n  "security": "JWT authentication hooks"\n}\n```\nWould you like me to trigger the multi-agent chain to construct a PRD for this?',
-      timestamp: '10:46 AM',
-      tokens: 120,
-      cost: 0.0018
     }
   ]);
 
   const [inputMessage, setInputMessage] = React.useState('');
   const [isStreaming, setIsStreaming] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   const models: ModelOption[] = [
-    { id: 'gpt-4o', name: 'GPT-4o (Standard)', provider: 'OpenAI', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-    { id: 'claude-3-5', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-    { id: 'gemini-1-5', name: 'Gemini 1.5 Pro', provider: 'Google', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'DeepSeek', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
-    { id: 'groq-llama3', name: 'Llama3 8B (Instant)', provider: 'Groq', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
-    { id: 'ollama-local', name: 'Ollama Local (Offline)', provider: 'Ollama', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
+    { id: 'gemini-1-5', name: 'Gemini 1.5 Pro', provider: 'gemini', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+    { id: 'gpt-4o', name: 'GPT-4o (Standard)', provider: 'openai', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
+    { id: 'claude-3-5', name: 'Claude 3.5 Sonnet', provider: 'claude', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'deepseek', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+    { id: 'groq-llama3', name: 'Llama3 8B (Instant)', provider: 'groq', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
+    { id: 'ollama-local', name: 'Ollama Local (Offline)', provider: 'ollama', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' }
   ];
 
   const currentModel = models.find(m => m.id === selectedModel) || models[0];
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!activeWorkspace || !inputMessage.trim()) return;
 
-    const newMsg: Message = {
+    const userMessageContent = inputMessage;
+    const userMsg: Message = {
       id: Date.now().toString(),
       sender: 'user',
-      content: inputMessage,
+      content: userMessageContent,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages(prev => [...prev, newMsg]);
+    setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
-    
-    // Simulate streaming UI indicator
     setIsStreaming(true);
-    setTimeout(() => {
-      setIsStreaming(false);
+    setError(null);
+
+    try {
+      const data = await apiService.post<any>(`/ai/chat`, {
+        workspace_id: activeWorkspace.id,
+        message: userMessageContent,
+        model: selectedModel === 'gemini-1-5' ? 'gemini-1.5-pro' : selectedModel,
+        provider: currentModel.provider
+      });
+
+      const responseText = data.response || 'No response returned from the agent.';
+      const promptLen = Math.max(10, userMessageContent.length / 4);
+      const compLen = Math.max(10, responseText.length / 4);
+      const tokensCount = Math.round(promptLen + compLen);
+      // Average cost is $0.000015 per token
+      const calculatedCost = tokensCount * 0.000015;
+
       setMessages(prev => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           sender: 'assistant',
-          content: 'This is a simulated response. The streaming engine hooks are ready to process token callbacks.',
+          content: responseText,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          tokens: 42,
-          cost: 0.00063
+          tokens: tokensCount,
+          cost: calculatedCost
         }
       ]);
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Chat routing failed');
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: 'assistant',
+          content: `Error: ${err.message || 'Failed to reach the AI chat backend. Please check your connection.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+    } finally {
+      setIsStreaming(false);
+    }
   };
+
+  if (!activeWorkspace) {
+    return (
+      <AppShell>
+        <div className="text-center py-20">
+          <Target className="mx-auto text-zinc-600 mb-4 animate-bounce" size={48} />
+          <h2 className="text-xl font-bold text-white">Select a Workspace</h2>
+          <p className="text-zinc-400 text-sm mt-2">Choose or create a workspace to view your autonomous chat monitor.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

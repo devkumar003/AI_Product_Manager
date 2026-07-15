@@ -6,8 +6,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.development import GitBranch, GitCommit, GitPullRequest
-from app.services.ai.agents.base import AgentConfig
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import AgentConfig
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.development.git_workflow")
 
@@ -47,6 +47,11 @@ class GitWorkflow:
         Records a Git commit in the workspace context database.
         """
         logger.info(f"Recording commit on branch: {branch_id}")
+
+        # Check if the branch actually belongs to this workspace
+        branch = db.query(GitBranch).filter(GitBranch.id == branch_id, GitBranch.workspace_id == workspace_id).first()
+        if not branch:
+            raise ValueError("Git branch not found in this workspace")
 
         # Calculate mock hash
         sha = hashlib.sha1()

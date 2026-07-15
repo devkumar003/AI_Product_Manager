@@ -12,15 +12,43 @@ class BaseRepository[ModelType: BaseEntity]:
     def __init__(self, model: type[ModelType]):
         self.model = model
 
-    def get(self, db: Session, id: Any) -> ModelType | None:
+    def get(self, db: Session, id: Any, workspace_id: Any | None = None) -> ModelType | None:
         """
-        Retrieve record by primary key, skipping soft-deleted rows.
+        Retrieve record by primary key and optional workspace_id, skipping soft-deleted rows.
         """
-        return (
-            db.query(self.model)
-            .filter(self.model.id == id, self.model.deleted_at.is_(None))
-            .first()
+        query = db.query(self.model).filter(self.model.id == id, self.model.deleted_at.is_(None))
+        if workspace_id is not None and hasattr(self.model, "workspace_id"):
+            query = query.filter(self.model.workspace_id == workspace_id)
+        return query.first()
+
+    def get_by_id_and_workspace(
+        self, db: Session, id: Any, workspace_id: Any
+    ) -> ModelType | None:
+        """
+        Retrieve record strictly by primary key and workspace_id, skipping soft-deleted rows.
+        """
+        query = db.query(self.model).filter(
+            self.model.id == id, self.model.deleted_at.is_(None)
         )
+        if hasattr(self.model, "workspace_id"):
+            query = query.filter(self.model.workspace_id == workspace_id)
+        return query.first()
+
+    def get_by_id_and_workspaces(
+        self, db: Session, id: Any, workspace_ids: list[Any]
+    ) -> ModelType | None:
+        """
+        Retrieve record strictly by primary key and matching a list of workspace_ids,
+        skipping soft-deleted rows.
+        """
+        query = db.query(self.model).filter(
+            self.model.id == id, self.model.deleted_at.is_(None)
+        )
+        if hasattr(self.model, "workspace_id"):
+            query = query.filter(self.model.workspace_id.in_(workspace_ids))
+        return query.first()
+
+
 
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100

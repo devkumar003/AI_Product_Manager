@@ -11,11 +11,13 @@ class AITokenUsage(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     user_id = Column(
         Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     provider = Column(String(50), nullable=False, default="openai")
     model = Column(String(100), nullable=False)

@@ -4,8 +4,8 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.executive import CEOReport
-from app.services.ai.agents.base import AgentConfig
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import AgentConfig
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.executive.ceo")
 

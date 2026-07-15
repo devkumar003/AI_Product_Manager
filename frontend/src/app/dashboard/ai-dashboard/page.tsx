@@ -23,6 +23,15 @@ const QUICK_ACTIONS = [
   { label: 'AI Chat Studio', href: '/dashboard/ai-chat', icon: '💬', color: 'bg-pink-500/10 border-pink-500/20 text-pink-300 hover:border-pink-500/40 hover:shadow-[0_0_20px_rgba(236,72,153,0.15)]' },
   { label: 'Knowledge Base', href: '/dashboard/knowledge-base', icon: '🧠', color: 'bg-orange-500/10 border-orange-500/20 text-orange-300 hover:border-orange-500/40 hover:shadow-[0_0_20px_rgba(249,115,22,0.15)]' },
   { label: 'Agent Catalog', href: '/dashboard/agents', icon: '🤖', color: 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]' },
+  { label: 'Market Research', href: '/dashboard/market-research', icon: '📈', color: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]' },
+  { label: 'Competitor Intel', href: '/dashboard/competitor-analysis', icon: '🛡️', color: 'bg-violet-500/10 border-violet-500/20 text-violet-300 hover:border-violet-500/40 hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]' },
+  { label: 'Cost Estimation', href: '/dashboard/cost-estimation', icon: '💵', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
+  { label: 'Risk Analysis', href: '/dashboard/risk-analysis', icon: '⚠️', color: 'bg-amber-500/10 border-amber-500/20 text-amber-300 hover:border-amber-500/40 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
+  { label: 'Tech Stack Creator', href: '/dashboard/tech-stack', icon: '💻', color: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-300 hover:border-cyan-500/40 hover:shadow-[0_0_20px_rgba(6,182,212,0.15)]' },
+  { label: 'Testing Plan', href: '/dashboard/testing-strategy', icon: '🧪', color: 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:border-rose-500/40 hover:shadow-[0_0_20px_rgba(244,63,94,0.15)]' },
+  { label: 'CI/CD & Deploy', href: '/dashboard/deployment-guide', icon: '🚀', color: 'bg-blue-500/10 border-blue-500/20 text-blue-300 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)]' },
+  { label: 'Wireframe Spec', href: '/dashboard/wireframe-suggestions', icon: '📐', color: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-300 hover:border-indigo-500/40 hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]' },
+  { label: 'Acceptance GWT', href: '/dashboard/acceptance-criteria', icon: '✅', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
 ];
 
 const RECENT_ENGINES = [

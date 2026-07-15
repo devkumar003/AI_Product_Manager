@@ -11,11 +11,13 @@ class Activity(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     user_id = Column(
         Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     action = Column(
         String(100), nullable=False

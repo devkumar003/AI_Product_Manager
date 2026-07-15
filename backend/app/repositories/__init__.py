@@ -9,6 +9,7 @@ from app.repositories.organization import org_repo
 from app.repositories.project import project_repo
 from app.repositories.user import user_repo
 from app.repositories.workspace import workspace_repo
+from app.repositories.executive import ceo_report_repo, cto_report_repo, coo_report_repo
 
 __all__ = [
     "BaseRepository",
@@ -22,4 +23,8 @@ __all__ = [
     "document_repo",
     "notification_repo",
     "activity_repo",
+    "ceo_report_repo",
+    "cto_report_repo",
+    "coo_report_repo",
 ]
+

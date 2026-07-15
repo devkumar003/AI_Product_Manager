@@ -1,5 +1,6 @@
 import logging
 import time
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -233,13 +234,14 @@ class AIOrchestrator:
         AISecurityManager.verify_prompt_injection(req.user_message)
         sanitized_input = AISecurityManager.sanitize_input(req.user_message)
 
-        # 2. Context Loading (Workspace Memory and Organization Guidelines)
-        workspace_ctx = await self.workspace_memory.get_context(req.workspace_id)
-        org_ctx = await self.organization_memory.get_context(req.workspace_id)
-
-        # 3. Memory Loading (Conversation History)
+        # 2. Context & Memory Loading (Concurrent)
         session_id = f"{req.workspace_id}:{req.user_id}"
-        conversation_history = await self.conversation_memory.get_context(session_id)
+        
+        workspace_ctx, org_ctx, conversation_history = await asyncio.gather(
+            self.workspace_memory.get_context(req.workspace_id),
+            self.organization_memory.get_context(req.workspace_id),
+            self.conversation_memory.get_context(session_id)
+        )
 
         # 4. Prompt loading & interpolation
         prompt_name = req.prompt_name or "chat_assistant"

@@ -67,11 +67,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
 
   // Helper to fetch user details and context state
-  const loadContextData = React.useCallback(async (token: string) => {
+  const loadContextData = React.useCallback(async () => {
     try {
-      // Set auth header manually for these initial calls
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
       // 1. Fetch user profile
       const userData = await apiService.get<UserResponse>('/users/me');
       setUser(userData);
@@ -107,7 +104,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Failed to load user profile or workspace context:', err);
       // Token is likely invalid or expired
       localStorage.removeItem('auth_token');
-      delete api.defaults.headers.common['Authorization'];
       setUser(null);
       setOrganizations([]);
       setWorkspaces([]);
@@ -126,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   React.useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (token) {
-      loadContextData(token);
+      loadContextData();
     } else {
       setIsLoading(false);
       // Redirect if not on public route
@@ -151,7 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const token = response.data.access_token;
       localStorage.setItem('auth_token', token);
-      await loadContextData(token);
+      await loadContextData();
       
       router.push('/dashboard');
     } catch (err) {
@@ -182,7 +178,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.warn('Backend logout failed or not implemented:', err);
     } finally {
       localStorage.removeItem('auth_token');
-      delete api.defaults.headers.common['Authorization'];
       setUser(null);
       setOrganizations([]);
       setWorkspaces([]);
@@ -216,7 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // If workspace is not in current list (maybe user switched orgs), reload context data
         const token = localStorage.getItem('auth_token');
         if (token) {
-          await loadContextData(token);
+          await loadContextData();
         }
       }
     } catch (err) {
@@ -229,7 +224,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        await loadContextData(token);
+        await loadContextData();
       }
     } catch (err) {
       console.error('Failed to refresh user context:', err);

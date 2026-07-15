@@ -74,6 +74,34 @@ from app.ai.services.requirement_engine import (
 )
 from app.ai.telemetry.metrics import TelemetryRegistry
 from app.ai.utils.security import AISecurityManager
+from app.ai.services.intelligence_engines import (
+    MarketResearchInput,
+    MarketResearchOutput,
+    MARKET_RESEARCH_PROMPT,
+    CompetitorAnalysisInput,
+    CompetitorAnalysisOutput,
+    COMPETITOR_ANALYSIS_PROMPT,
+)
+from app.ai.services.acceptance_criteria_engine import (
+    AcceptanceCriteriaInput,
+    AcceptanceCriteriaOutput,
+    ACCEPTANCE_CRITERIA_PROMPT,
+)
+from app.ai.services.wireframe_engine import (
+    WireframeInput,
+    WireframeOutput,
+    WIREFRAME_PROMPT,
+)
+from app.ai.services.testing_strategy_engine import (
+    TestingStrategyInput,
+    TestingStrategyOutput,
+    TESTING_STRATEGY_PROMPT,
+)
+from app.ai.services.deployment_guide_engine import (
+    DeploymentGuideInput,
+    DeploymentGuideOutput,
+    DEPLOYMENT_GUIDE_PROMPT,
+)
 
 logger = logging.getLogger("app.ai.services.engine_executor")
 
@@ -116,9 +144,13 @@ ENGINE_REGISTRY: dict[str, tuple[type[BaseModel], type[BaseModel], str]] = {
     ),
     "timeline_prediction": (TimelineInput, TimelineOutput, TIMELINE_PROMPT),
     "risk_analysis": (RiskAnalysisInput, RiskAnalysisOutput, RISK_ANALYSIS_PROMPT),
+    "market_research": (MarketResearchInput, MarketResearchOutput, MARKET_RESEARCH_PROMPT),
+    "competitor_analysis": (CompetitorAnalysisInput, CompetitorAnalysisOutput, COMPETITOR_ANALYSIS_PROMPT),
+    "acceptance_criteria": (AcceptanceCriteriaInput, AcceptanceCriteriaOutput, ACCEPTANCE_CRITERIA_PROMPT),
+    "wireframe_suggestions": (WireframeInput, WireframeOutput, WIREFRAME_PROMPT),
+    "testing_strategy": (TestingStrategyInput, TestingStrategyOutput, TESTING_STRATEGY_PROMPT),
+    "deployment_guide": (DeploymentGuideInput, DeploymentGuideOutput, DEPLOYMENT_GUIDE_PROMPT),
 }
-
-
 class EngineExecutor:
     """Executes any registered business engine through the LLM pipeline."""
 
@@ -138,6 +170,29 @@ class EngineExecutor:
             raise ValueError(
                 f"Unknown engine: '{engine_name}'. Available: {list(ENGINE_REGISTRY.keys())}"
             )
+
+        # Check database cache first if workspace_id is provided and refresh is not forced
+        db = None
+        if workspace_id and not input_data.get("refresh", False):
+            from app.database.session import SessionLocal
+            from app.models.insight import WorkspaceInsight
+            from uuid import UUID
+            try:
+                ws_uuid = UUID(workspace_id)
+                db = SessionLocal()
+                existing = db.query(WorkspaceInsight).filter(
+                    WorkspaceInsight.workspace_id == ws_uuid,
+                    WorkspaceInsight.category == engine_name,
+                    WorkspaceInsight.deleted_at.is_(None)
+                ).first()
+                if existing:
+                    logger.info(f"Loaded cached engine result for '{engine_name}' in workspace '{workspace_id}'")
+                    return existing.payload
+            except Exception as e:
+                logger.warning(f"Failed to query cache for engine '{engine_name}': {e}")
+            finally:
+                if db:
+                    db.close()
 
         input_cls, output_cls, system_prompt = ENGINE_REGISTRY[engine_name]
         start_time = time.time()
@@ -195,6 +250,38 @@ class EngineExecutor:
             latency_ms=latency,
             success=True,
         )
+
+        # Persist to database if workspace_id is provided
+        if workspace_id:
+            from app.database.session import SessionLocal
+            from app.models.insight import WorkspaceInsight
+            from uuid import UUID
+            db = None
+            try:
+                ws_uuid = UUID(workspace_id)
+                db = SessionLocal()
+                existing = db.query(WorkspaceInsight).filter(
+                    WorkspaceInsight.workspace_id == ws_uuid,
+                    WorkspaceInsight.category == engine_name,
+                    WorkspaceInsight.deleted_at.is_(None)
+                ).first()
+                if existing:
+                    existing.payload = validated_output.model_dump()
+                    db.add(existing)
+                else:
+                    new_insight = WorkspaceInsight(
+                        workspace_id=ws_uuid,
+                        category=engine_name,
+                        payload=validated_output.model_dump()
+                    )
+                    db.add(new_insight)
+                db.commit()
+                logger.info(f"Cached engine result for '{engine_name}' in workspace '{workspace_id}'")
+            except Exception as e:
+                logger.warning(f"Failed to persist engine result for '{engine_name}': {e}")
+            finally:
+                if db:
+                    db.close()
 
         return validated_output.model_dump()
 

@@ -1,6 +1,9 @@
 import asyncio
 import logging
+import hashlib
+import json
 from collections.abc import AsyncIterator
+import httpx
 
 from app.ai.exceptions import ProviderException
 from app.ai.providers import (
@@ -14,6 +17,7 @@ from app.ai.providers import (
 )
 from app.ai.schemas import AIResponse, StreamingToken
 from app.core.settings import settings
+from app.core.redis import cache_manager
 
 logger = logging.getLogger("app.ai.llm_manager")
 
@@ -40,11 +44,46 @@ class LLMManager:
         }
 
     def _get_provider_priority(self, requested: str | None = None) -> list[str]:
-        default_order = ["openai", "claude", "gemini", "groq", "deepseek", "ollama"]
+        # Filter providers dynamically by presence of API keys
+        configured = []
+        if settings.OPENAI_API_KEY:
+            configured.append("openai")
+        if settings.ANTHROPIC_API_KEY:
+            configured.append("claude")
+        if settings.GEMINI_API_KEY:
+            configured.append("gemini")
+        if settings.GROQ_API_KEY:
+            configured.append("groq")
+        if settings.DEEPSEEK_API_KEY:
+            configured.append("deepseek")
+        # Ollama is local, always configured
+        configured.append("ollama")
+
+        # Order priority: requested provider first, if configured.
         if requested and requested in self.providers:
-            # Place requested provider first, followed by others as fallbacks
-            return [requested] + [p for p in default_order if p != requested]
-        return default_order
+            if requested in configured:
+                return [requested] + [p for p in configured if p != requested]
+            else:
+                # If requested provider is not configured, fall back to configured ones
+                return configured
+        return configured if configured else ["gemini"]
+
+    def _get_cache_key(
+        self,
+        messages: list[dict[str, str]],
+        provider: str | None,
+        model: str | None,
+        temperature: float,
+    ) -> str:
+        payload = {
+            "messages": messages,
+            "provider": provider,
+            "model": model,
+            "temperature": temperature,
+        }
+        dumped = json.dumps(payload, sort_keys=True)
+        hashed = hashlib.sha256(dumped.encode()).hexdigest()
+        return f"llm_cache:{hashed}"
 
     async def generate(
         self,
@@ -55,7 +94,19 @@ class LLMManager:
         max_tokens: int = 4096,
         retry_count: int = 3,
         timeout: float = 60.0,
+        use_cache: bool = True,
     ) -> AIResponse:
+        cache_key = self._get_cache_key(messages, provider, model, temperature)
+        if use_cache:
+            try:
+                cached_data = await cache_manager.get(cache_key)
+                if cached_data:
+                    logger.info("LLM cache hit!")
+                    data = json.loads(cached_data)
+                    return AIResponse(**data)
+            except Exception as ce:
+                logger.warning(f"Failed to check LLM cache: {ce}")
+
         priority_chain = self._get_provider_priority(provider)
         last_error = None
 
@@ -76,12 +127,28 @@ class LLMManager:
                     )
                     res = await target_provider.generate(messages, config)
                     if res.success:
+                        if use_cache:
+                            try:
+                                await cache_manager.set(
+                                    cache_key,
+                                    res.model_dump_json(),
+                                    expire_seconds=3600,
+                                )
+                            except Exception as ce:
+                                logger.warning(f"Failed to set LLM cache: {ce}")
                         return res
                     else:
                         logger.warning(
                             f"Provider {p_name} returned failure: {res.error_message}"
                         )
                         last_error = Exception(res.error_message)
+                except (asyncio.TimeoutError, httpx.TimeoutException) as te:
+                    logger.warning(
+                        f"Timeout error on {p_name} generate (attempt {attempt}): {str(te)}"
+                    )
+                    last_error = te
+                    # On timeout, back off slightly faster
+                    await asyncio.sleep(1)
                 except Exception as e:
                     logger.warning(
                         f"Error on {p_name} generate (attempt {attempt}): {str(e)}"

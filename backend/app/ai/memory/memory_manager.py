@@ -1,5 +1,9 @@
 import abc
+import asyncio
+import json
 from typing import Any
+
+from app.core.redis import cache_manager
 
 
 class BaseMemory(abc.ABC):
@@ -49,28 +53,52 @@ class TemporaryMemory(BaseMemory):
 
 class ConversationMemory(BaseMemory):
     """
-    Manages session-based chat records, supporting automated prompt window compression.
+    Manages session-based chat records, supporting automated prompt window compression
+    and persistent Redis storage.
     """
 
     def __init__(self, limit: int = 10) -> None:
         self._limit = limit
         self._store: dict[str, list[dict[str, str]]] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def _get_lock(self, key: str) -> asyncio.Lock:
+        """Return a per-key asyncio lock to serialise concurrent writes."""
+        if key not in self._locks:
+            self._locks[key] = asyncio.Lock()
+        return self._locks[key]
 
     async def get_context(self, key: str, **kwargs: Any) -> list[dict[str, str]]:
-        history = self._store.get(key, [])
+        cache_key = f"chat_history:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            history = json.loads(cached) if cached else []
+        except Exception:
+            history = self._store.get(key, [])
+
         # Apply automatic memory compression if limits are exceeded
         if len(history) > self._limit:
             history = await self.compress(key, history)
         return history
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
-        if key not in self._store:
-            self._store[key] = []
-        turns = data if isinstance(data, list) else [data]
-        for turn in turns:
-            self._store[key].append(
-                {"role": turn.get("role", "user"), "content": turn.get("content", "")}
-            )
+        async with self._get_lock(key):
+            cache_key = f"chat_history:{key}"
+            history = await self.get_context(key)
+
+            turns = data if isinstance(data, list) else [data]
+            for turn in turns:
+                history.append(
+                    {"role": turn.get("role", "user"), "content": turn.get("content", "")}
+                )
+
+            try:
+                await cache_manager.set(
+                    cache_key, json.dumps(history), expire_seconds=86400
+                )
+            except Exception:
+                pass
+            self._store[key] = history
 
     async def compress(
         self, key: str, history: list[dict[str, str]]
@@ -82,19 +110,37 @@ class ConversationMemory(BaseMemory):
         keep_turns = history[-4:]  # Retain the most recent 4 messages as raw history
         compress_turns = history[:-4]
 
-        # Simple structural compression summarizing statements
-        user_queries = [t["content"] for t in compress_turns if t["role"] == "user"]
-        summary = f"Summary of early exchange: User discussed details concerning: {', '.join(user_queries[:3])}."
+        # Consolidated compression summarizing previous turns
+        exchanges = []
+        for t in compress_turns:
+            role_label = "User" if t["role"] == "user" else "Assistant"
+            content_snippet = t["content"][:60].strip() + (
+                "..." if len(t["content"]) > 60 else ""
+            )
+            exchanges.append(f"{role_label}: {content_snippet}")
 
+        summary = "Previous dialog history:\n" + "\n".join(exchanges[:6])
         compressed = [
-            {"role": "system", "content": f"[Conversation Summary] {summary}"}
+            {"role": "system", "content": f"[Conversation Summary]\n{summary}"}
         ]
         compressed.extend(keep_turns)
 
+        cache_key = f"chat_history:{key}"
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(compressed), expire_seconds=86400
+            )
+        except Exception:
+            pass
         self._store[key] = compressed
         return compressed
 
     async def clear(self, key: str) -> None:
+        cache_key = f"chat_history:{key}"
+        try:
+            await cache_manager.delete(cache_key)
+        except Exception:
+            pass
         if key in self._store:
             del self._store[key]
 
@@ -108,7 +154,13 @@ class WorkspaceMemory(BaseMemory):
         self._store: dict[str, dict[str, Any]] = {}
 
     async def get_context(self, key: str, **kwargs: Any) -> list[dict[str, str]]:
-        settings = self._store.get(key, {})
+        cache_key = f"workspace_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            settings = json.loads(cached) if cached else {}
+        except Exception:
+            settings = self._store.get(key, {})
+
         if not settings:
             return []
         context_str = ", ".join(f"{k}: {v}" for k, v in settings.items())
@@ -117,12 +169,30 @@ class WorkspaceMemory(BaseMemory):
         ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
-        if key not in self._store:
-            self._store[key] = {}
+        cache_key = f"workspace_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            settings = json.loads(cached) if cached else {}
+        except Exception:
+            settings = self._store.get(key, {})
+
         if isinstance(data, dict):
-            self._store[key].update(data)
+            settings.update(data)
+
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(settings), expire_seconds=86400
+            )
+        except Exception:
+            pass
+        self._store[key] = settings
 
     async def clear(self, key: str) -> None:
+        cache_key = f"workspace_memory:{key}"
+        try:
+            await cache_manager.delete(cache_key)
+        except Exception:
+            pass
         if key in self._store:
             del self._store[key]
 
@@ -136,7 +206,13 @@ class OrganizationMemory(BaseMemory):
         self._store: dict[str, dict[str, Any]] = {}
 
     async def get_context(self, key: str, **kwargs: Any) -> list[dict[str, str]]:
-        guidelines = self._store.get(key, {})
+        cache_key = f"org_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            guidelines = json.loads(cached) if cached else {}
+        except Exception:
+            guidelines = self._store.get(key, {})
+
         if not guidelines:
             return []
         lines = [f"- {k}: {v}" for k, v in guidelines.items()]
@@ -148,11 +224,29 @@ class OrganizationMemory(BaseMemory):
         ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
-        if key not in self._store:
-            self._store[key] = {}
+        cache_key = f"org_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            guidelines = json.loads(cached) if cached else {}
+        except Exception:
+            guidelines = self._store.get(key, {})
+
         if isinstance(data, dict):
-            self._store[key].update(data)
+            guidelines.update(data)
+
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(guidelines), expire_seconds=86400
+            )
+        except Exception:
+            pass
+        self._store[key] = guidelines
 
     async def clear(self, key: str) -> None:
+        cache_key = f"org_memory:{key}"
+        try:
+            await cache_manager.delete(cache_key)
+        except Exception:
+            pass
         if key in self._store:
             del self._store[key]

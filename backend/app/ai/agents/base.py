@@ -141,6 +141,10 @@ class BaseAgent(Generic[InputT, OutputT], abc.ABC):
                 f"Invalid input provided to agent '{self.name}': {str(e)}"
             )
 
+        # Prompt Injection Protection
+        from app.ai.utils.security import AISecurityManager
+        AISecurityManager.verify_prompt_injection(validated_input.model_dump_json())
+
         # 2. System Prompts Preparation
         system_base = self.get_system_instructions()
 
@@ -185,40 +189,55 @@ class BaseAgent(Generic[InputT, OutputT], abc.ABC):
         messages.extend(history)
         messages.append({"role": "user", "content": validated_input.model_dump_json()})
 
-        # 4. Model Invocation with retry-loop backoff (delegated to LLMManager)
-        try:
-            self.logger.info(
-                f"Invoking LLM for agent '{self.name}' using model '{self.settings.model}'"
-            )
-            response = await self.llm.generate(
-                messages=messages,
-                provider=None,  # Auto-routes down priority list
-                model=self.settings.model,
-                temperature=self.settings.temperature,
-                max_tokens=self.settings.max_tokens,
-                retry_count=self.settings.retry_count,
-                timeout=self.settings.timeout,
-            )
-        except Exception as e:
-            self.logger.error(f"LLM generate call failed: {str(e)}")
-            raise ProviderException(
-                f"Agent '{self.name}' LLM execution failed: {str(e)}"
-            )
+        # 4. Model Invocation with self-healing retry loop
+        max_validation_attempts = 3
+        current_messages = list(messages)
+        content = ""
+        response = None
 
-        # 5. Output Validation (conforming response to schema)
-        content = response.content.strip()
-        parsed_json = self._parse_json_content(content)
+        for attempt in range(1, max_validation_attempts + 1):
+            try:
+                self.logger.info(
+                    f"Invoking LLM for agent '{self.name}' using model '{self.settings.model}' (Attempt {attempt}/{max_validation_attempts})"
+                )
+                response = await self.llm.generate(
+                    messages=current_messages,
+                    provider=None,  # Auto-routes down priority list
+                    model=self.settings.model,
+                    temperature=self.settings.temperature if attempt == 1 else 0.1,
+                    max_tokens=self.settings.max_tokens,
+                    retry_count=1,
+                    timeout=self.settings.timeout,
+                    use_cache=False if attempt > 1 else True,  # Bypass cache on retry
+                )
 
-        try:
-            validated_output = self.output_schema(**parsed_json)
-        except Exception as e:
-            self.logger.error(
-                f"Output schema validation failed for agent '{self.name}': {str(e)}"
-            )
-            raise ValidationException(
-                message=f"Agent '{self.name}' output failed target Pydantic schema: {str(e)}",
-                details={"raw_content": content, "error": str(e)},
-            )
+                # 5. Output Validation (conforming response to schema)
+                content = response.content.strip()
+                parsed_json = self._parse_json_content(content)
+                validated_output = self.output_schema(**parsed_json)
+                break
+            except Exception as e:
+                self.logger.warning(
+                    f"Output validation failed for agent '{self.name}' on attempt {attempt}: {str(e)}"
+                )
+                if attempt == max_validation_attempts:
+                    if isinstance(e, (ValidationException, json.JSONDecodeError, ValueError)):
+                        raise ValidationException(
+                            message=f"Agent '{self.name}' output failed target schema after {max_validation_attempts} attempts: {str(e)}",
+                            details={"raw_content": content, "error": str(e)},
+                        )
+                    raise e
+
+                # Append repair instructions to message chain
+                current_messages.append({"role": "assistant", "content": content})
+                current_messages.append({
+                    "role": "user",
+                    "content": (
+                        f"Your previous response failed target schema validation with error: '{str(e)}'. "
+                        "Please correct the response and return ONLY valid JSON matching the schema. "
+                        "Do not include any conversational filler, notes, or markdown fences except standard JSON."
+                    )
+                })
 
         # Save turns to Conversation Memory
         await self.conversation_memory.store(
@@ -233,10 +252,10 @@ class BaseAgent(Generic[InputT, OutputT], abc.ABC):
         latency = (time.time() - start_time) * 1000
         self.telemetry.record_request(
             workspace_id=workspace_id,
-            provider=response.provider,
-            model=response.model,
-            tokens=response.usage.total_tokens,
-            cost=response.usage.estimated_cost_usd,
+            provider=response.provider if response else "unknown",
+            model=response.model if response else "unknown",
+            tokens=response.usage.total_tokens if (response and response.usage) else 0,
+            cost=response.usage.estimated_cost_usd if (response and response.usage) else 0.0,
             latency_ms=latency,
             success=True,
         )
@@ -253,6 +272,10 @@ class BaseAgent(Generic[InputT, OutputT], abc.ABC):
         Executes raw token streaming.
         Note: Output schema structures validation cannot be enforced on raw streaming chunks in real time.
         """
+        # Prompt Injection Protection
+        from app.ai.utils.security import AISecurityManager
+        AISecurityManager.verify_prompt_injection(input_data.model_dump_json())
+
         system_base = self.get_system_instructions()
         messages = [
             {"role": "system", "content": system_base},
@@ -269,14 +292,9 @@ class BaseAgent(Generic[InputT, OutputT], abc.ABC):
             yield chunk
 
     def _parse_json_content(self, text: str) -> dict[str, Any]:
-        cleaned = text.strip()
-        if "```json" in cleaned:
-            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
-        elif "```" in cleaned:
-            cleaned = cleaned.split("```")[1].split("```")[0].strip()
-
+        from app.ai.utils.json_parser import extract_json_from_text
         try:
-            return json.loads(cleaned)
+            return extract_json_from_text(text)
         except Exception as e:
             raise ValidationException(
                 message=f"Failed to parse agent output content as valid JSON structure: {str(e)}",

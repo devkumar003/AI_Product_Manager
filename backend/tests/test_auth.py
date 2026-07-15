@@ -151,3 +151,69 @@ def test_profile_and_workspace_switch(client, db):
     assert profile_res2.json()["preferences"]["active_workspace_id"] == str(
         workspace.id
     )
+
+
+def test_cookie_and_csrf_auth(client, db):
+    """
+    Test HttpOnly cookies authentication and CSRF token protection.
+    """
+    signup_payload = {
+        "email": "cookie_test@example.com",
+        "username": "cookieuser",
+        "full_name": "Cookie User",
+        "password": "securepassword123",
+    }
+    client.post("/api/v1/auth/signup", json=signup_payload)
+
+    # 1. Login to get cookies
+    login_res = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": "cookie_test@example.com",
+            "password": "securepassword123",
+        },
+    )
+    assert login_res.status_code == 200
+    
+    # Verify cookies are set in the response
+    assert "access_token" in login_res.cookies
+    assert "refresh_token" in login_res.cookies
+    assert "XSRF-TOKEN" in login_res.cookies
+
+    # Clear current client credentials from headers to force using cookies
+    if "Authorization" in client.headers:
+        del client.headers["Authorization"]
+
+    # 2. Access protected GET route using cookies (should succeed without CSRF check since it's GET)
+    profile_res = client.get("/api/v1/users/me")
+    assert profile_res.status_code == 200
+    assert profile_res.json()["email"] == "cookie_test@example.com"
+
+    # Get user default workspace
+    user = db.query(User).filter_by(email="cookie_test@example.com").first()
+    org = db.query(Organization).filter_by(owner_id=user.id).first()
+    workspace = db.query(Workspace).filter_by(organization_id=org.id).first()
+
+    # 3. Access protected POST route (workspace switch) using cookies WITHOUT CSRF (should fail with 403)
+    switch_res = client.post(f"/api/v1/workspaces/{workspace.id}/switch")
+    assert switch_res.status_code == 403
+    assert "CSRF token validation failed" in switch_res.json()["detail"]
+
+    # 4. Access protected POST route with WRONG CSRF token (should fail with 403)
+    bad_headers = {"X-XSRF-TOKEN": "wrong-token-value"}
+    switch_res = client.post(
+        f"/api/v1/workspaces/{workspace.id}/switch",
+        headers=bad_headers
+    )
+    assert switch_res.status_code == 403
+
+    # 5. Access protected POST route with CORRECT CSRF token (should succeed)
+    csrf_token = login_res.cookies["XSRF-TOKEN"]
+    good_headers = {"X-XSRF-TOKEN": csrf_token}
+    switch_res = client.post(
+        f"/api/v1/workspaces/{workspace.id}/switch",
+        headers=good_headers
+    )
+    assert switch_res.status_code == 200
+    assert switch_res.json()["active_workspace_id"] == str(workspace.id)
+

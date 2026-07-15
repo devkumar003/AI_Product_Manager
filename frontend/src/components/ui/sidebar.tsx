@@ -21,6 +21,19 @@ import {
   Building2,
   Cpu,
   MessageSquare,
+  TrendingUp,
+  Activity,
+  Lightbulb,
+  ClipboardList,
+  Map,
+  Shield,
+  DollarSign,
+  AlertTriangle,
+  CheckSquare,
+  Monitor,
+  TestTube,
+  Rocket,
+  LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -29,24 +42,90 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
 }
 
+interface MenuItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface MenuSection {
+  title: string;
+  items: MenuItem[];
+}
+
 export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const pathname = usePathname();
   const { workspaces, activeWorkspace, switchWorkspace, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>({});
 
-  const menuItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Projects', href: '/projects', icon: FolderKanban },
-    { name: 'AI Hub', href: '/dashboard/ai-dashboard', icon: Sparkles },
-    { name: 'AI Agents', href: '/dashboard/agents', icon: Cpu },
-    { name: 'AI Chat', href: '/dashboard/ai-chat', icon: MessageSquare },
-    { name: 'Documents', href: '/documents', icon: FileText },
-    { name: 'Planning', href: '/dashboard/planning', icon: Calendar },
-    { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
-    { name: 'Development', href: '/dashboard/development', icon: Code2 },
-    { name: 'Executive', href: '/dashboard/executive', icon: Building2 },
-    { name: 'Profile', href: '/profile', icon: User },
-    { name: 'Settings', href: '/settings', icon: Settings },
+  const toggleSection = (title: string) => {
+    setCollapsedSections(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const menuSections: MenuSection[] = [
+    {
+      title: 'Core',
+      items: [
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Projects', href: '/projects', icon: FolderKanban },
+        { name: 'AI Chat', href: '/dashboard/ai-chat', icon: MessageSquare },
+        { name: 'AI Hub', href: '/dashboard/ai-dashboard', icon: Sparkles },
+      ],
+    },
+    {
+      title: 'Product Discovery',
+      items: [
+        { name: 'Idea Analyzer', href: '/dashboard/idea-analyzer', icon: Lightbulb },
+        { name: 'Market Research', href: '/dashboard/intelligence?tab=market', icon: TrendingUp },
+        { name: 'Competitor Analysis', href: '/dashboard/intelligence?tab=competitors', icon: Shield },
+      ],
+    },
+    {
+      title: 'Requirements',
+      items: [
+        { name: 'PRD Generator', href: '/dashboard/prd-generator', icon: FileText },
+        { name: 'Requirements', href: '/dashboard/requirement-generator', icon: ClipboardList },
+        { name: 'Acceptance Criteria', href: '/dashboard/acceptance-criteria', icon: CheckSquare },
+        { name: 'Wireframes', href: '/dashboard/wireframe-suggestions', icon: Monitor },
+      ],
+    },
+    {
+      title: 'Planning & Roadmap',
+      items: [
+        { name: 'Planning', href: '/dashboard/planning', icon: Calendar },
+        { name: 'Roadmap', href: '/dashboard/roadmap-generator', icon: Map },
+        { name: 'Cost Estimation', href: '/dashboard/intelligence?tab=costs', icon: DollarSign },
+        { name: 'Risk Analysis', href: '/dashboard/intelligence?tab=risks', icon: AlertTriangle },
+      ],
+    },
+    {
+      title: 'Engineering',
+      items: [
+        { name: 'Architecture', href: '/dashboard/architecture-generator', icon: Cpu },
+        { name: 'Tech Stack', href: '/dashboard/tech-stack', icon: Code2 },
+        { name: 'Development', href: '/dashboard/development', icon: Code2 },
+        { name: 'Testing Strategy', href: '/dashboard/testing-strategy', icon: TestTube },
+        { name: 'Deployment Guide', href: '/dashboard/deployment-guide', icon: Rocket },
+      ],
+    },
+    {
+      title: 'Operations',
+      items: [
+        { name: 'Analytics', href: '/dashboard/analytics', icon: Activity },
+        { name: 'AI Agents', href: '/dashboard/agents', icon: Cpu },
+        { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
+        { name: 'Executive', href: '/dashboard/executive', icon: Building2 },
+      ],
+    },
+    {
+      title: 'Account',
+      items: [
+        { name: 'Documents', href: '/documents', icon: FileText },
+        { name: 'Profile', href: '/profile', icon: User },
+        { name: 'Settings', href: '/settings', icon: Settings },
+      ],
+    },
   ];
 
   const handleWorkspaceSelect = async (workspaceId: string) => {
@@ -56,6 +135,11 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     } catch (err) {
       console.error('Failed to switch workspace:', err);
     }
+  };
+
+  const isItemActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard';
+    return pathname.startsWith(href);
   };
 
   return (
@@ -144,43 +228,67 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
       </div>
 
       {/* Menu Links */}
-      <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isGeneratorRoute = pathname.includes('-generator') || pathname.includes('idea-analyzer') || pathname.includes('knowledge-base');
-          const isActive =
-            item.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : item.href === '/dashboard/ai-dashboard'
-              ? pathname === '/dashboard/ai-dashboard' || isGeneratorRoute
-              : pathname.startsWith(item.href);
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
+        {menuSections.map((section) => {
+          const isSectionCollapsed = collapsedSections[section.title] ?? false;
 
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={twMerge(
-                'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 relative',
-                isActive
-                  ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.12)]'
-                  : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-100 border border-transparent'
+            <div key={section.title} className="mb-1">
+              {/* Section Header */}
+              {isOpen && (
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="flex w-full items-center justify-between px-3 py-1.5 mb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-400 transition-colors"
+                >
+                  <span>{section.title}</span>
+                  <ChevronDown
+                    size={10}
+                    className={twMerge(
+                      'transition-transform duration-200',
+                      isSectionCollapsed && '-rotate-90'
+                    )}
+                  />
+                </button>
               )}
-            >
-              <Icon
-                size={18}
-                className={twMerge(
-                  'transition duration-300 shrink-0',
-                  isActive ? 'text-indigo-400' : 'text-zinc-400 group-hover:text-zinc-100',
-                  isOpen ? 'mr-3' : 'mr-0'
-                )}
-              />
-              {isOpen && <span>{item.name}</span>}
-              {!isOpen && (
-                <div className="absolute left-14 rounded bg-zinc-950 border border-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 pointer-events-none transition duration-200 whitespace-nowrap shadow-xl">
-                  {item.name}
+
+              {/* Section Items */}
+              {(!isSectionCollapsed || !isOpen) && (
+                <div className="space-y-0.5">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isItemActive(item.href);
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={twMerge(
+                          'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300 relative',
+                          isActive
+                            ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.12)]'
+                            : 'text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-100 border border-transparent'
+                        )}
+                      >
+                        <Icon
+                          size={16}
+                          className={twMerge(
+                            'transition duration-300 shrink-0',
+                            isActive ? 'text-indigo-400' : 'text-zinc-400 group-hover:text-zinc-100',
+                            isOpen ? 'mr-3' : 'mr-0'
+                          )}
+                        />
+                        {isOpen && <span className="truncate text-[13px]">{item.name}</span>}
+                        {!isOpen && (
+                          <div className="absolute left-14 rounded bg-zinc-950 border border-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 pointer-events-none transition duration-200 whitespace-nowrap shadow-xl z-50">
+                            {item.name}
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
-            </Link>
+            </div>
           );
         })}
       </nav>

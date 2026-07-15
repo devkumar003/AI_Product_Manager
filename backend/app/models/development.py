@@ -21,6 +21,7 @@ class CodePlan(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -40,11 +41,13 @@ class GeneratedCodeFile(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     project_id = Column(
         Uuid,
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     file_path = Column(String(512), nullable=False)
     file_type = Column(
@@ -67,6 +70,7 @@ class CodeReview(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     file_path = Column(String(512), nullable=False)
     status = Column(
@@ -88,6 +92,7 @@ class CodeQualityScan(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     complexity_score = Column(Float, default=0.0, nullable=False)
     duplication_rate = Column(Float, default=0.0, nullable=False)
@@ -105,6 +110,7 @@ class RefactoringProposal(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     file_path = Column(String(512), nullable=False)
     original_code = Column(Text, nullable=False)
@@ -124,6 +130,7 @@ class BugReport(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -144,6 +151,7 @@ class GitBranch(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     branch_name = Column(String(255), nullable=False)
     source_branch = Column(String(255), default="main", nullable=False)
@@ -161,11 +169,13 @@ class GitCommit(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     branch_id = Column(
         Uuid,
         ForeignKey("git_branches.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     commit_hash = Column(String(40), nullable=False)
     commit_message = Column(String(512), nullable=False)
@@ -183,6 +193,7 @@ class GitPullRequest(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -203,6 +214,7 @@ class ReleasePlan(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     version = Column(String(50), nullable=False)  # e.g., v1.0.0
     name = Column(String(255), nullable=False)
@@ -225,11 +237,13 @@ class DeploymentPlan(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     release_id = Column(
         Uuid,
         ForeignKey("release_plans.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     environment = Column(
         String(50), default="Production", nullable=False
@@ -256,6 +270,7 @@ class SprintUpdate(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     sprint_name = Column(String(255), nullable=False)
     burn_down_data = Column(JSON, default=dict, nullable=False)
@@ -272,12 +287,14 @@ class DeveloperTaskAssignment(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     developer_name = Column(String(255), nullable=False)
     planning_item_id = Column(
         Uuid,
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     assigned_role = Column(String(100), nullable=False)  # Lead Backend, QA, UI Designer
     allocated_hours = Column(Float, default=0.0, nullable=False)

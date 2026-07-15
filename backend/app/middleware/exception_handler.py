@@ -33,6 +33,13 @@ class GlobalExceptionMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
 
             duration = time.time() - start_time
+            # Record HTTP metric
+            try:
+                from app.ai.telemetry.observability import record_http_request
+                record_http_request(response.status_code, duration * 1000)
+            except Exception:
+                pass
+
             # Log outgoing response
             logger.info(
                 f"Outgoing response: {request.method} {request.url.path} - Status: {response.status_code}",
@@ -50,22 +57,36 @@ class GlobalExceptionMiddleware(BaseHTTPMiddleware):
             # Standardize status code and messaging
             status_code = 500
             error_message = "Internal Server Error"
-            error_detail = str(exc)
+            raw_error_detail = str(exc)
+
+            from app.core.settings import settings
+            is_testing = getattr(settings, "ENVIRONMENT", "development") == "testing"
 
             if isinstance(exc, StarletteHTTPException):
                 status_code = exc.status_code
                 error_detail = str(exc.detail)
                 error_message = "HTTP Exception"
+            elif is_testing:
+                error_detail = raw_error_detail
+            else:
+                error_detail = "An unexpected error occurred. Please contact support."
+
+            # Record HTTP metric for failures
+            try:
+                from app.ai.telemetry.observability import record_http_request
+                record_http_request(status_code, duration * 1000)
+            except Exception:
+                pass
 
             # Log error details
             logger.error(
-                f"Request failed: {request.method} {request.url.path} - Error: {error_detail}",
+                f"Request failed: {request.method} {request.url.path} - Error: {raw_error_detail}",
                 exc_info=True,
                 extra={
                     "traceId": trace_id,
                     "status_code": status_code,
                     "duration_ms": round(duration * 1000, 2),
-                    "error_detail": error_detail,
+                    "error_detail": raw_error_detail,
                 },
             )
 

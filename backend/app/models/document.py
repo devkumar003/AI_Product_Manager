@@ -11,11 +11,13 @@ class Document(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     project_id = Column(
         Uuid,
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     name = Column(String(255), nullable=False)
     filename = Column(String(512), nullable=False)

@@ -6,11 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class GoalBase(BaseModel):
-    name: str = Field(..., description="Name of the goal")
-    description: str | None = Field(None, description="Detailed description")
-    type: str = Field(..., description="Business, Product, Technical, Sprint, Release")
+    name: str = Field(..., min_length=1, max_length=500, description="Name of the goal")
+    description: str | None = Field(None, max_length=5000, description="Detailed description")
+    type: str = Field(..., min_length=1, max_length=50, description="Business, Product, Technical, Sprint, Release")
     status: str | None = Field(
-        "Open", description="Open, In Progress, Achieved, Abandoned"
+        "Open", max_length=50, description="Open, In Progress, Achieved, Abandoned"
     )
     progress: float | None = Field(
         0.0, description="Progress percentage from 0.0 to 100.0"
@@ -25,10 +25,10 @@ class GoalCreate(GoalBase):
 
 
 class GoalUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    type: str | None = None
-    status: str | None = None
+    name: str | None = Field(None, max_length=500)
+    description: str | None = Field(None, max_length=5000)
+    type: str | None = Field(None, max_length=50)
+    status: str | None = Field(None, max_length=50)
     progress: float | None = None
     target_date: datetime | None = None
 
@@ -43,9 +43,9 @@ class GoalResponse(GoalBase):
 
 
 class MissionBase(BaseModel):
-    title: str
-    description: str | None = None
-    status: str | None = "Planned"
+    title: str = Field(..., min_length=1, max_length=500)
+    description: str | None = Field(None, max_length=5000)
+    status: str | None = Field("Planned", max_length=50)
     objectives: list[dict[str, Any]] = Field(default_factory=list)
     milestones: list[dict[str, Any]] = Field(default_factory=list)
     deliverables: list[dict[str, Any]] = Field(default_factory=list)
@@ -57,9 +57,9 @@ class MissionCreate(MissionBase):
 
 
 class MissionUpdate(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    status: str | None = None
+    title: str | None = Field(None, max_length=500)
+    description: str | None = Field(None, max_length=5000)
+    status: str | None = Field(None, max_length=50)
     objectives: list[dict[str, Any]] | None = None
     milestones: list[dict[str, Any]] | None = None
     deliverables: list[dict[str, Any]] | None = None
@@ -76,11 +76,11 @@ class MissionResponse(MissionBase):
 
 
 class PlanningItemBase(BaseModel):
-    type: str  # Epic, Feature, UserStory, Task, Subtask
-    title: str
-    description: str | None = None
-    status: str | None = "Todo"
-    priority: str | None = "Medium"
+    type: str = Field(..., min_length=1, max_length=50)  # Epic, Feature, UserStory, Task, Subtask
+    title: str = Field(..., min_length=1, max_length=500)
+    description: str | None = Field(None, max_length=5000)
+    status: str | None = Field("Todo", max_length=50)
+    priority: str | None = Field("Medium", max_length=50)
     estimated_hours: float | None = 0.0
     assigned_roles: list[str] = Field(default_factory=list)
     metadata_fields: dict[str, Any] = Field(default_factory=dict)
@@ -92,10 +92,10 @@ class PlanningItemCreate(PlanningItemBase):
 
 
 class PlanningItemUpdate(BaseModel):
-    type: str | None = None
-    title: str | None = None
-    description: str | None = None
-    status: str | None = None
+    type: str | None = Field(None, max_length=50)
+    title: str | None = Field(None, max_length=500)
+    description: str | None = Field(None, max_length=5000)
+    status: str | None = Field(None, max_length=50)
     priority: str | None = None
     estimated_hours: float | None = None
     assigned_roles: list[str] | None = None
@@ -154,8 +154,8 @@ class ExecutionQueueItemResponse(BaseModel):
 
 
 class ScenarioSimulationCreate(BaseModel):
-    name: str
-    vision: str
+    name: str = Field(..., min_length=1, max_length=500)
+    vision: str = Field(..., min_length=1, max_length=10000)
 
 
 class ScenarioSimulationResponse(BaseModel):

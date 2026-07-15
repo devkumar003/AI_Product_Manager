@@ -5,9 +5,15 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.settings import settings
 
-engine = create_engine(
-    settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True, pool_size=10, max_overflow=20
-)
+_db_url = settings.SQLALCHEMY_DATABASE_URI
+
+# SQLite does not support pool_size / max_overflow; configure per dialect
+if _db_url and _db_url.startswith("sqlite"):
+    engine = create_engine(_db_url, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(
+        _db_url, pool_pre_ping=True, pool_size=10, max_overflow=20
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -24,3 +30,17 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def check_db_health() -> bool:
+    """
+    Verifies connection to PostgreSQL database.
+    """
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
+

@@ -13,21 +13,18 @@ export interface ApiResponse<T = unknown> {
 
 export const api: AxiosInstance = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 120000, // 120 seconds timeout for AI operations
 });
 
-// Auth Interceptor: Attach bearer token to request headers
+// Auth Interceptor: No longer injects Authorization header from localStorage, relies on HttpOnly cookies
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
     return config;
   },
   (error: AxiosError) => {

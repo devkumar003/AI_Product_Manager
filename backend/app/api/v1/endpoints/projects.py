@@ -107,7 +107,7 @@ def get_project(
         require_workspace_permission(Permission.WORKSPACE_READ)
     ),
 ) -> Project:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -127,7 +127,7 @@ def update_project(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Project:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -169,7 +169,7 @@ def delete_project(
         require_workspace_permission(Permission.WORKSPACE_DELETE)
     ),
 ) -> Project:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -199,7 +199,7 @@ def archive_project(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Project:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -274,7 +274,7 @@ def duplicate_project(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Project:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -311,7 +311,7 @@ def get_project_dashboard(
         require_workspace_permission(Permission.WORKSPACE_READ)
     ),
 ) -> dict:
-    project = project_repo.get(db, project_id)
+    project = project_repo.get(db, project_id, workspace_id=workspace_id)
     if not project or project.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

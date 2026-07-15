@@ -1,13 +1,72 @@
 import logging
+import re
+import urllib.parse
+from pathlib import Path
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.development import GeneratedCodeFile
-from app.services.ai.agents.base import AgentConfig
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import AgentConfig
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.development.pipelines")
+
+# Windows reserved device names (case-insensitive)
+_RESERVED_NAMES = frozenset({
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+})
+
+
+def safe_filename(name: str) -> str:
+    """
+    Sanitise a user-supplied target name into a safe path component.
+
+    Rejects:
+      - empty / whitespace-only strings
+      - URL-encoded traversal sequences (..%2F, etc.)
+      - characters outside [a-zA-Z0-9_ .-]
+      - Windows reserved device names (CON, NUL, …)
+      - any result that would escape a base directory via pathlib resolution
+    """
+    if not name or not name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target name cannot be empty.",
+        )
+
+    # Decode percent-encoded sequences so traversal cannot be smuggled
+    decoded = urllib.parse.unquote(name)
+
+    # Strict character whitelist
+    if not re.match(r"^[a-zA-Z0-9_\-. ]+$", decoded):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target name contains invalid characters. "
+                   "Only alphanumeric, space, dot, underscore, and hyphen are allowed.",
+        )
+
+    # Reserved-name check (stem only, e.g. "CON.txt" → "CON")
+    stem = Path(decoded).stem.upper()
+    if stem in _RESERVED_NAMES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"'{stem}' is a reserved system name and cannot be used.",
+        )
+
+    # Pathlib resolution guard – ensure the name stays under a virtual root
+    base = Path("/safe/root")
+    resolved = (base / decoded).resolve()
+    if not str(resolved).startswith(str(base.resolve())):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Directory traversal detected in target name.",
+        )
+
+    return decoded.replace(" ", "_")
 
 
 class DevelopmentPipelines:
@@ -22,6 +81,7 @@ class DevelopmentPipelines:
         """
         Automatic PRD Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running PRD pipeline for project: {project_id}")
         system_prompt = "You are a Principal Product Manager. Generate a detailed Product Requirement Document (PRD) in clean Markdown."
         llm_prompt = (
@@ -39,7 +99,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"docs/PRD_{target_name.replace(' ', '_')}.md",
+            file_path=f"docs/PRD_{safe_name}.md",
             file_type="PRD",
             content=response.content,
             language="Markdown",
@@ -61,6 +121,7 @@ class DevelopmentPipelines:
         """
         Requirement Analysis Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running Requirement Analysis pipeline for: {target_name}")
         system_prompt = "You are a Senior Business Analyst. Perform a rigorous, multi-faceted requirement analysis in Markdown."
         llm_prompt = (
@@ -78,7 +139,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"docs/Requirement_Analysis_{target_name.replace(' ', '_')}.md",
+            file_path=f"docs/Requirement_Analysis_{safe_name}.md",
             file_type="RequirementAnalysis",
             content=response.content,
             language="Markdown",
@@ -100,6 +161,7 @@ class DevelopmentPipelines:
         """
         Architecture Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running Architecture design pipeline for: {target_name}")
         system_prompt = "You are a Principal Software Architect. Output a comprehensive System Architecture Design Document in Markdown."
         llm_prompt = (
@@ -117,7 +179,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"docs/Architecture_{target_name.replace(' ', '_')}.md",
+            file_path=f"docs/Architecture_{safe_name}.md",
             file_type="Architecture",
             content=response.content,
             language="Markdown",
@@ -139,6 +201,7 @@ class DevelopmentPipelines:
         """
         Database Schema Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running Database DDL generation pipeline for: {target_name}")
         system_prompt = "You are a Senior Database Administrator. Generate production-ready database SQL DDL scripts."
         llm_prompt = (
@@ -156,7 +219,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"database/schema_{target_name.lower().replace(' ', '_')}.sql",
+            file_path=f"database/schema_{safe_name.lower()}.sql",
             file_type="Database",
             content=response.content,
             language="SQL",
@@ -178,6 +241,7 @@ class DevelopmentPipelines:
         """
         Backend Code Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running Backend code generation pipeline for: {target_name}")
         system_prompt = "You are a Staff Python & FastAPI developer. Generate production-grade backend controller routes and models."
         llm_prompt = (
@@ -195,7 +259,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"backend/app/controllers/{target_name.lower().replace(' ', '_')}.py",
+            file_path=f"backend/app/controllers/{safe_name.lower()}.py",
             file_type="Backend",
             content=response.content,
             language="Python",
@@ -217,6 +281,7 @@ class DevelopmentPipelines:
         """
         Frontend Code Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(
             f"Running Frontend React components generation pipeline for: {target_name}"
         )
@@ -236,7 +301,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"frontend/src/app/dashboard/{target_name.lower().replace(' ', '_')}/page.tsx",
+            file_path=f"frontend/src/app/dashboard/{safe_name.lower()}/page.tsx",
             file_type="Frontend",
             content=response.content,
             language="TypeScript",
@@ -258,6 +323,7 @@ class DevelopmentPipelines:
         """
         API Interface / Endpoint Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running API specs generation pipeline for: {target_name}")
         system_prompt = "You are an API Architect. Generate standardized API Specifications in OpenAPI YAML format."
         llm_prompt = (
@@ -275,7 +341,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"docs/api_spec_{target_name.lower().replace(' ', '_')}.yaml",
+            file_path=f"docs/api_spec_{safe_name.lower()}.yaml",
             file_type="API",
             content=response.content,
             language="YAML",
@@ -297,6 +363,7 @@ class DevelopmentPipelines:
         """
         Unit Test Generation Module (generation only, do not execute).
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Generating unit test suite for: {target_name}")
         system_prompt = "You are a QA Engineering Specialist. Generate comprehensive unit tests in Pytest or Jest."
         llm_prompt = (
@@ -314,7 +381,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"backend/tests/test_unit_{target_name.lower().replace(' ', '_')}.py",
+            file_path=f"backend/tests/test_unit_{safe_name.lower()}.py",
             file_type="UnitTestCase",
             content=response.content,
             language="Python",
@@ -336,6 +403,7 @@ class DevelopmentPipelines:
         """
         Integration Test Generation Module (generation only, do not execute).
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Generating integration test suite for: {target_name}")
         system_prompt = "You are an Integration Testing Expert. Write automated integration tests targeting HTTP APIs."
         llm_prompt = (
@@ -353,7 +421,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"backend/tests/test_integration_{target_name.lower().replace(' ', '_')}.py",
+            file_path=f"backend/tests/test_integration_{safe_name.lower()}.py",
             file_type="IntegrationTestCase",
             content=response.content,
             language="Python",
@@ -375,6 +443,7 @@ class DevelopmentPipelines:
         """
         Documentation Generation Pipeline.
         """
+        safe_name = safe_filename(target_name)
         logger.info(f"Running Documentation Generation pipeline for: {target_name}")
         system_prompt = "You are a Lead Technical Writer. Write rich, clean, and comprehensive markdown documentation."
         llm_prompt = (
@@ -392,7 +461,7 @@ class DevelopmentPipelines:
         code_file = GeneratedCodeFile(
             workspace_id=workspace_id,
             project_id=project_id,
-            file_path=f"docs/User_Guide_{target_name.lower().replace(' ', '_')}.md",
+            file_path=f"docs/User_Guide_{safe_name.lower()}.md",
             file_type="Documentation",
             content=response.content,
             language="Markdown",

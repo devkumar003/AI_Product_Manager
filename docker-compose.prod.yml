@@ -22,12 +22,14 @@ services:
     restart: always
     command: redis-server --loglevel warning --requirepass ${REDIS_PASSWORD:-redis_secure_prod_pwd}
     # Do not expose 6379 to host in production for enhanced security
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_secure_prod_pwd}
     volumes:
       - redis_prod_data:/data
     networks:
       - app-prod-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -6,6 +6,8 @@ import { AppShell } from '@/components/layout/shell';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
 import { AgentThoughtVisualizer, ThoughtStep } from '@/components/ui/agent-thought-visualizer';
 import { Sparkles, FileText, Check, Copy, Download, Layers, Users, Target, ShieldCheck, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/lib/api';
 
 const INITIAL_STEPS: ThoughtStep[] = [
   {
@@ -56,8 +58,10 @@ const INITIAL_STEPS: ThoughtStep[] = [
 ];
 
 export default function PRDGeneratorPage() {
+  const { activeWorkspace } = useAuth();
   const [idea, setIdea] = React.useState('');
   const [result, setResult] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [steps, setSteps] = React.useState<ThoughtStep[]>(INITIAL_STEPS);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'requirements' | 'stories' | 'metrics' | 'raw'>('summary');
@@ -86,54 +90,54 @@ export default function PRDGeneratorPage() {
   };
 
   const handleGenerate = async () => {
-    if (!idea.trim()) return;
+    if (!activeWorkspace || !idea.trim()) return;
     setLoading(true);
     setResult(null);
+    setError(null);
     setActiveTab('summary');
 
     const progressPromise = simulateProgress();
 
     try {
-      const res = await fetch('/api/v1/ai/workflows/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflow_name: 'prd_generation', context: { idea } }),
+      const data = await apiService.post<any>('/ai/workflows/execute', {
+        workflow_name: 'prd_generation',
+        workspace_id: activeWorkspace.id,
+        context: { idea },
       });
+      const rawResult = data.result || data;
+      const prd = rawResult.prd || {};
+      const stories = rawResult.stories || {};
+      
+      const mapped = {
+        title: prd.title || activeWorkspace.name + ' PRD Specification',
+        overview: prd.executive_summary || prd.background || 'No overview generated.',
+        targetAudience: (prd.personas || []).map((p: any) => ({
+          segment: p.name || p.role || p.segment || 'User Persona',
+          painPoint: p.pain_points || p.description || p.painPoint || 'Needs product solutions'
+        })),
+        functionalRequirements: (prd.functional_requirements || []).map((f: any, idx: number) => ({
+          id: f.id || `FR-${idx + 1}`,
+          title: f.title || f.name || 'Requirement',
+          description: f.description || '',
+          priority: f.priority || 'Should Have'
+        })),
+        userStories: (stories.stories || []).map((s: any, idx: number) => ({
+          id: s.story_id || `US-${idx + 1}`,
+          asA: s.as_a || s.role || 'User',
+          iWantTo: s.i_want || s.i_want_to || s.description || 'perform action',
+          soThat: s.so_that || s.benefit || 'benefit is achieved'
+        })),
+        successMetrics: (prd.success_metrics || []).map((m: any, idx: number) => ({
+          metric: typeof m === 'string' ? m : m.metric || m.name || `Metric ${idx + 1}`,
+          target: typeof m === 'object' && m.target ? m.target : '100%',
+          timeframe: typeof m === 'object' && m.timeframe ? m.timeframe : 'Q1'
+        }))
+      };
       await progressPromise;
-      if (res.ok) {
-        const data = await res.json();
-        setResult(data.result || data);
-      } else {
-        throw new Error('Fallback triggered');
-      }
-    } catch (e) {
+      setResult(mapped);
+    } catch (e: any) {
       await progressPromise;
-      // Fallback structured PRD so users can test & inspect immediately even if offline
-      setResult({
-        title: `Autonomous PRD: ${idea.slice(0, 40)}...`,
-        overview: `Comprehensive product specification synthesized autonomously by AI ProductOS multi-agent swarm for: "${idea}". Designed to accelerate time-to-market while guaranteeing robust scalability and user delight.`,
-        targetAudience: [
-          { segment: 'Enterprise Product Managers', painPoint: 'High overhead coordinating cross-functional engineering teams manually' },
-          { segment: 'Technical Architects & Tech Leads', painPoint: 'Misaligned specifications causing costly rework during sprint execution' },
-          { segment: 'Executive Stakeholders', painPoint: 'Lack of real-time visibility into feature delivery and ROI alignment' }
-        ],
-        functionalRequirements: [
-          { id: 'FR-101', title: 'Real-Time Multi-Agent Orchestration', priority: 'Must Have', description: 'System shall coordinate specialized LLM agents (PRD, Architecture, Roadmap) via async workflows with SSE progress broadcasting.' },
-          { id: 'FR-102', title: 'Autonomous Self-Healing Loop', priority: 'Must Have', description: 'Agent outputs shall be validated against strict Pydantic JSON schemas; syntax discrepancies trigger automated repair attempts without human intervention.' },
-          { id: 'FR-103', title: 'Interactive Spec Export & Sync', priority: 'Should Have', description: 'Users shall be able to export finalized PRDs as formatted Markdown or JSON artifacts with one-click clipboard copying.' },
-          { id: 'FR-104', title: 'Telemetry & FinOps Attribution', priority: 'Nice to Have', description: 'System shall log exact token consumption (prompt/completion) and compute latency per workspace for cost tracking.' }
-        ],
-        userStories: [
-          { id: 'US-01', asA: 'Product Manager', iWantTo: 'input a rough product vision in natural language', soThat: 'I receive an enterprise-ready PRD with user stories and metrics within 15 seconds.' },
-          { id: 'US-02', asA: 'Developer', iWantTo: 'inspect exact functional acceptance criteria', soThat: 'I can begin coding immediately without ambiguous requirement assumptions.' },
-          { id: 'US-03', asA: 'Workspace Admin', iWantTo: 'review agent reasoning steps and confidence scores', soThat: 'I can trust the autonomous decision logic before approving milestones.' }
-        ],
-        successMetrics: [
-          { metric: 'Time-to-Spec Velocity', target: '< 25 seconds per complete PRD generation', timeframe: 'Immediate upon launch' },
-          { metric: 'Developer Acceptance Rate', target: '94% of generated stories accepted without manual scoping edits', timeframe: 'First 90 days' },
-          { metric: 'Specification Error Reduction', target: '80% decrease in sprint scope creep', timeframe: 'Quarterly average' }
-        ]
-      });
+      setError(e.message || 'An error occurred during PRD generation');
     } finally {
       setLoading(false);
     }
@@ -156,6 +160,18 @@ export default function PRDGeneratorPage() {
     a.download = `PRD_Specification_${Date.now()}.json`;
     a.click();
   };
+
+  if (!activeWorkspace) {
+    return (
+      <AppShell>
+        <div className="text-center py-20">
+          <Target className="mx-auto text-zinc-600 mb-4 animate-bounce" size={48} />
+          <h2 className="text-xl font-bold text-white">Select a Workspace</h2>
+          <p className="text-zinc-400 text-sm mt-2">Choose or create a workspace to view your autonomous PRD studio.</p>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -197,6 +213,12 @@ export default function PRDGeneratorPage() {
             )}
           </div>
         </div>
+
+        {error && (
+          <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-4 text-rose-300 text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Idea Input Card */}
         <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 backdrop-blur-md space-y-4">

@@ -1,0 +1,150 @@
+'use client';
+
+import * as React from 'react';
+import { AppShell } from '@/components/layout/shell';
+import { Breadcrumb } from '@/components/ui/breadcrumb';
+import { useAuth } from '@/context/AuthContext';
+import { apiService } from '@/lib/api';
+import { Target, Sparkles, CheckSquare, Award } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function AcceptanceCriteriaPage() {
+  const { activeWorkspace } = useAuth();
+  const [input, setInput] = React.useState('');
+  const [result, setResult] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (activeWorkspace) {
+      setInput(activeWorkspace.description || `A product named ${activeWorkspace.name}`);
+    }
+  }, [activeWorkspace]);
+
+  const handleExecute = async () => {
+    if (!activeWorkspace || !input.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setError(null);
+    try {
+      const data = await apiService.post<any>('/ai/engines/execute', {
+        engine_name: 'acceptance_criteria',
+        workspace_id: activeWorkspace.id,
+        input_data: { user_story: input }
+      });
+      setResult(data.result || data);
+    } catch (e: any) {
+      setError(e.message || 'An error occurred during execution');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!activeWorkspace) {
+    return (
+      <AppShell>
+        <div className="text-center py-20">
+          <Target className="mx-auto text-zinc-600 mb-4 animate-bounce" size={48} />
+          <h2 className="text-xl font-bold text-white">Select a Workspace</h2>
+          <p className="text-zinc-400 text-sm mt-2">Choose or create a workspace to view acceptance criteria.</p>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell>
+      <div className="space-y-6">
+        <div>
+          <Breadcrumb items={[{ label: 'Home', href: '/dashboard' }, { label: 'AI Hub', href: '/dashboard' }, { label: 'Acceptance Criteria' }]} />
+          <h1 className="text-3xl font-extrabold tracking-tight text-white mt-2 flex items-center">
+            <CheckSquare className="mr-3 text-indigo-400" size={28} /> Acceptance Criteria Generator
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">Generate precise Given-When-Then (GWT) scenarios and Definition of Done checklists</p>
+        </div>
+
+        {/* Input Area */}
+        <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 backdrop-blur-md space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
+              <Sparkles size={14} className="text-amber-400" /> Target Concept / Vision
+            </label>
+          </div>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            rows={4}
+            disabled={loading}
+            className="w-full bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-100 placeholder-zinc-500 focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 outline-none resize-none transition-all"
+          />
+          <button
+            onClick={handleExecute}
+            disabled={loading || !input.trim()}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white text-sm font-bold shadow-lg transition-all duration-200 active:scale-95"
+          >
+            {loading ? 'Generating Criteria...' : 'Generate Criteria'}
+          </button>
+        </div>
+
+        {/* Errors */}
+        {error && (
+          <div className="bg-rose-950/20 border border-rose-900/50 rounded-xl p-4 text-rose-300 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Results */}
+        {result && (
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 space-y-4">
+              <h3 className="text-lg font-bold text-white">User Story Summary</h3>
+              <div className="text-sm text-zinc-300 leading-relaxed bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
+                {result.user_story_summary}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <CheckSquare size={18} className="text-indigo-400" /> Given-When-Then Scenarios
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(result.criteria || []).map((c: any, idx: number) => (
+                  <div key={idx} className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 space-y-3">
+                    <div className="font-bold text-white text-sm border-b border-zinc-900 pb-2">{c.scenario}</div>
+                    <div className="text-xs text-zinc-300"><span className="text-indigo-400 font-bold uppercase mr-1">Given:</span> {c.given}</div>
+                    <div className="text-xs text-zinc-300"><span className="text-indigo-400 font-bold uppercase mr-1">When:</span> {c.when}</div>
+                    <div className="text-xs text-zinc-300"><span className="text-emerald-400 font-bold uppercase mr-1">Then:</span> {c.then}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 space-y-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Award size={16} className="text-indigo-400" /> Edge Cases & Negative Scenarios
+                </h3>
+                <ul className="list-disc list-inside text-xs text-zinc-300 space-y-1">
+                  {(result.edge_cases || []).map((item: any, idx: number) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-zinc-950/40 border border-zinc-900 space-y-4">
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <CheckSquare size={16} className="text-emerald-400" /> Definition of Done Checklist
+                </h3>
+                <ul className="list-disc list-inside text-xs text-zinc-300 space-y-1">
+                  {(result.definition_of_done || []).map((item: any, idx: number) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    </AppShell>
+  );
+}

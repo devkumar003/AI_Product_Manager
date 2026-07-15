@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.models.development import CodePlan
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.development.code_planner")
 

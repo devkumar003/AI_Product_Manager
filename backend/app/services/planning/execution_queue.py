@@ -54,12 +54,11 @@ class ExecutionQueue:
             .all()
         )
 
-    def mark_running(self, db: Session, item_id: UUID) -> bool:
-        item = (
-            db.query(ExecutionQueueItem)
-            .filter(ExecutionQueueItem.id == item_id)
-            .first()
-        )
+    def mark_running(self, db: Session, item_id: UUID, workspace_id: UUID | None = None) -> bool:
+        query = db.query(ExecutionQueueItem).filter(ExecutionQueueItem.id == item_id)
+        if workspace_id:
+            query = query.filter(ExecutionQueueItem.workspace_id == workspace_id)
+        item = query.first()
         if not item:
             return False
         item.status = "Running"
@@ -68,12 +67,11 @@ class ExecutionQueue:
         db.commit()
         return True
 
-    def mark_success(self, db: Session, item_id: UUID) -> bool:
-        item = (
-            db.query(ExecutionQueueItem)
-            .filter(ExecutionQueueItem.id == item_id)
-            .first()
-        )
+    def mark_success(self, db: Session, item_id: UUID, workspace_id: UUID | None = None) -> bool:
+        query = db.query(ExecutionQueueItem).filter(ExecutionQueueItem.id == item_id)
+        if workspace_id:
+            query = query.filter(ExecutionQueueItem.workspace_id == workspace_id)
+        item = query.first()
         if not item:
             return False
         item.status = "Succeeded"
@@ -81,12 +79,11 @@ class ExecutionQueue:
         db.commit()
         return True
 
-    def mark_failed(self, db: Session, item_id: UUID, error_msg: str) -> bool:
-        item = (
-            db.query(ExecutionQueueItem)
-            .filter(ExecutionQueueItem.id == item_id)
-            .first()
-        )
+    def mark_failed(self, db: Session, item_id: UUID, error_msg: str, workspace_id: UUID | None = None) -> bool:
+        query = db.query(ExecutionQueueItem).filter(ExecutionQueueItem.id == item_id)
+        if workspace_id:
+            query = query.filter(ExecutionQueueItem.workspace_id == workspace_id)
+        item = query.first()
         if not item:
             return False
 

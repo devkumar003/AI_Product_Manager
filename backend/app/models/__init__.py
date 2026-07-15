@@ -46,6 +46,9 @@ from app.models.planning import (
 from app.models.project import Project
 from app.models.user import User
 from app.models.workspace import Workspace
+from app.models.insight import WorkspaceInsight
+from app.models.chat import ChatMessage
+from app.models.simulated_integration import SimulatedIntegrationAsset
 
 __all__ = [
     "Base",
@@ -92,4 +95,7 @@ __all__ = [
     "CTOReport",
     "COOReport",
     "AITokenUsage",
+    "WorkspaceInsight",
+    "ChatMessage",
+    "SimulatedIntegrationAsset",
 ]

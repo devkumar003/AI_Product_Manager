@@ -20,6 +20,15 @@ class AISecurityManager:
         r"disregard\s+prior\s+rules",
         r"new\s+role:\s*",
         r"bypass\s+restrictions",
+        r"do\s+anything\s+now",
+        r"dan\s+mode",
+        r"jailbreak",
+        r"assistant\s+instruction\s+override",
+        r"unauthorized\s+injection",
+        r"malicious\s+exploit",
+        r"ignore\s+above\s+and\s+do",
+        r"read\s+all\s+system\s+prompts",
+        r"output\s+the\s+system\s+prompt\s+above",
     ]
 
     # Patterns to detect api keys/secrets in text

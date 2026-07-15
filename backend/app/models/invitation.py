@@ -11,11 +11,13 @@ class Invitation(BaseEntity):
         Uuid,
         ForeignKey("organizations.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     workspace_id = Column(
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     email = Column(String(255), nullable=False)
     role = Column(String(50), default="Viewer", nullable=False)
@@ -28,6 +30,7 @@ class Invitation(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     # Relationships

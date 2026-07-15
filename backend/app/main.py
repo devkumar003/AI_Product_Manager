@@ -21,8 +21,17 @@ async def lifespan(app: FastAPI):
     # Startup tasks
     logger.info("Initializing AI ProductOS Backend Service...")
     logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info("Ensuring database tables are initialized...")
-    Base.metadata.create_all(bind=engine)
+    
+    # Production Environment Validation
+    if settings.is_prod():
+        if not settings.REDIS_URL and not settings.REDIS_PASSWORD:
+            logger.warning("SECURITY WARNING: Redis is configured without a password in production mode.")
+        if "*" in settings.BACKEND_CORS_ORIGINS:
+            logger.warning("SECURITY WARNING: CORS origins contains '*' in production mode. Restrict this to authorized hosts.")
+        if not any([settings.OPENAI_API_KEY, settings.GEMINI_API_KEY, settings.ANTHROPIC_API_KEY, settings.GROQ_API_KEY, settings.DEEPSEEK_API_KEY]):
+            logger.error("CRITICAL CONFIGURATION: No LLM provider API keys are configured (OpenAI, Gemini, Anthropic, Groq, DeepSeek).")
+
+    logger.info("Ensuring database tables are managed by Alembic migrations...")
 
     # Seed default integration plugins
     from app.database.session import SessionLocal
@@ -50,16 +59,22 @@ app = FastAPI(
 
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.middleware.security import RateLimitingMiddleware, SecurityHeadersMiddleware
+from app.middleware.security import (
+    RateLimitingMiddleware,
+    SecurityHeadersMiddleware,
+    RequestSizeLimitingMiddleware,
+)
 
 # CORS configuration
 if settings.BACKEND_CORS_ORIGINS:
     allow_all = "*" in settings.BACKEND_CORS_ORIGINS
+    # SECURITY: Browsers reject credentials with wildcard origins.
+    # In production, never use wildcard — always list explicit origins.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"] if allow_all else settings.BACKEND_CORS_ORIGINS,
         allow_origin_regex=r"https://.*\.vercel\.app" if not allow_all else None,
-        allow_credentials=True,
+        allow_credentials=not allow_all,  # credentials require explicit origins
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -67,6 +82,7 @@ if settings.BACKEND_CORS_ORIGINS:
 # Production Hardening Middlewares
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitingMiddleware, requests_per_minute=300)
+app.add_middleware(RequestSizeLimitingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Global Exception & Logging Middleware
@@ -84,9 +100,44 @@ def read_root():
 
 
 # Also mount a /health directly if needed at the root level in addition to /api/v1/health
+from fastapi import Response, status
+
 @app.get("/health", tags=["health"])
-def get_root_health():
-    return {"status": "healthy", "version": "1.0.0"}
+async def get_root_health(response: Response):
+    from app.database.session import check_db_health
+    from app.core.redis import cache_manager
+
+    health_status = {"status": "healthy", "version": "1.0.0", "details": {}}
+    unhealthy = False
+
+    # Check Database
+    if check_db_health():
+        health_status["details"]["database"] = "healthy"
+    else:
+        health_status["details"]["database"] = "unhealthy"
+        unhealthy = True
+
+    # Check Redis
+    try:
+        redis_ok = await cache_manager.ping()
+        if redis_ok:
+            health_status["details"]["redis"] = "healthy"
+        else:
+            if settings.ENVIRONMENT == "production":
+                health_status["details"]["redis"] = "unhealthy"
+                unhealthy = True
+            else:
+                health_status["details"]["redis"] = "warning: local memory fallback"
+    except Exception as e:
+        health_status["details"]["redis"] = f"unhealthy: {str(e)}"
+        unhealthy = True
+
+    if unhealthy:
+        health_status["status"] = "unhealthy"
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return health_status
+
 
 
 # Mount AI Observability endpoints

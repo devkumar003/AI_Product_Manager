@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str = "AI ProductOS"
     ENVIRONMENT: str = "development"  # development, testing, production
+    LOG_LEVEL: str = "INFO"
     API_V1_STR: str = "/api/v1"
 
     # CORS settings
@@ -65,21 +66,16 @@ class Settings(BaseSettings):
         port = int(values.get("POSTGRES_PORT", 5432))
         postgres_uri = f"postgresql+psycopg2://{values.get('POSTGRES_USER', 'postgres')}:{values.get('POSTGRES_PASSWORD', 'postgres')}@{host}:{port}/{values.get('POSTGRES_DB', 'ai_product_os')}"
 
-        env = values.get("ENVIRONMENT", "development")
-        if env in ("production", "staging"):
-            return postgres_uri
-
         import socket
-
         try:
-            with socket.create_connection((host, port), timeout=0.5):
+            with socket.create_connection((host, port), timeout=2.0):
                 pass
             return postgres_uri
-        except Exception:
-            print(
-                f"PostgreSQL server at {host}:{port} is unreachable. Falling back to local SQLite: sqlite:///./development.db"
-            )
-            return "sqlite:///./development.db"
+        except Exception as e:
+            raise RuntimeError(
+                f"Database connection failed: PostgreSQL server at {host}:{port} is unreachable. "
+                f"Ensure the database service is running. Error: {e}"
+            ) from e
 
     # Redis Config
     REDIS_HOST: str = "redis"
@@ -89,7 +85,9 @@ class Settings(BaseSettings):
 
     # Security Config
     JWT_SECRET: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520  # 8 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes (production standard)
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+    METRICS_API_KEY: str = "dev_metrics_secret_token"
 
     # AI Provider API Keys
     OPENAI_API_KEY: str | None = None

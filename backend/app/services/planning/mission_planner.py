@@ -25,7 +25,11 @@ class MissionPlanner:
         # Load the source goals
         goals = (
             db.query(Goal)
-            .filter(Goal.id.in_(goal_ids), Goal.deleted_at.is_(None))
+            .filter(
+                Goal.id.in_(goal_ids),
+                Goal.workspace_id == workspace_id,
+                Goal.deleted_at.is_(None),
+            )
             .all()
         )
         goals_summary = "\n".join(
@@ -108,12 +112,15 @@ class MissionPlanner:
         db.refresh(mission)
         return mission
 
-    def get_mission(self, db: Session, mission_id: UUID) -> Mission | None:
-        return (
-            db.query(Mission)
-            .filter(Mission.id == mission_id, Mission.deleted_at.is_(None))
-            .first()
+    def get_mission(
+        self, db: Session, mission_id: UUID, workspace_id: UUID | None = None
+    ) -> Mission | None:
+        query = db.query(Mission).filter(
+            Mission.id == mission_id, Mission.deleted_at.is_(None)
         )
+        if workspace_id:
+            query = query.filter(Mission.workspace_id == workspace_id)
+        return query.first()
 
     def list_workspace_missions(self, db: Session, workspace_id: UUID) -> list[Mission]:
         return (

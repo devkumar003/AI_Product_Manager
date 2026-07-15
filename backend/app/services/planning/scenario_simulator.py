@@ -121,14 +121,13 @@ class ScenarioSimulator:
         db.refresh(simulation)
         return simulation
 
-    def get_simulation(self, db: Session, sim_id: UUID) -> ScenarioSimulation | None:
-        return (
-            db.query(ScenarioSimulation)
-            .filter(
-                ScenarioSimulation.id == sim_id, ScenarioSimulation.deleted_at.is_(None)
-            )
-            .first()
+    def get_simulation(self, db: Session, sim_id: UUID, workspace_id: UUID | None = None) -> ScenarioSimulation | None:
+        query = db.query(ScenarioSimulation).filter(
+            ScenarioSimulation.id == sim_id, ScenarioSimulation.deleted_at.is_(None)
         )
+        if workspace_id:
+            query = query.filter(ScenarioSimulation.workspace_id == workspace_id)
+        return query.first()
 
     def list_simulations(
         self, db: Session, workspace_id: UUID

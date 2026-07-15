@@ -69,6 +69,8 @@ interface Mission {
 interface PlanningItemMetadata {
   scheduled_start?: string;
   scheduled_end?: string;
+  acceptance_criteria?: string;
+  wireframe_suggestions?: string;
 }
 
 interface PlanningItem {
@@ -118,6 +120,7 @@ interface Simulation {
   average_case_timeline?: TimelineScenario;
   budget_impact?: BudgetImpactScenario;
   timeline_impact?: TimelineImpactScenario;
+  created_at?: string;
 }
 
 interface Analytics {
@@ -136,8 +139,7 @@ interface TemplateDefinition {
 export default function PlanningDashboard() {
   const { activeWorkspace } = useAuth();
 
-  // Selected Tab
-  const [activeTab, setActiveTab] = React.useState<'goals' | 'backlog' | 'dependencies' | 'simulations' | 'compressor'>('goals');
+  const [activeTab, setActiveTab] = React.useState<'goals' | 'backlog' | 'kanban' | 'dependencies' | 'simulations' | 'compressor'>('goals');
 
   // Loading States
   const [isGoalsLoading, setIsGoalsLoading] = React.useState(false);
@@ -151,6 +153,62 @@ export default function PlanningDashboard() {
   const [simulations, setSimulations] = React.useState<Simulation[]>([]);
   const [analytics, setAnalytics] = React.useState<Analytics | null>(null);
   const [templates, setTemplates] = React.useState<Record<string, TemplateDefinition>>({});
+  const [expandedItem, setExpandedItem] = React.useState<string | null>(null);
+  const [generatingId, setGeneratingId] = React.useState<string | null>(null);
+
+  const handleGenerateAcceptanceCriteria = async (itemId: string) => {
+    if (!activeWorkspace) return;
+    setGeneratingId(itemId);
+    try {
+      const data = await apiService.post<{ acceptance_criteria: string }>(
+        `/planning/backlog/items/${itemId}/acceptance-criteria?workspace_id=${activeWorkspace.id}`
+      );
+      setBacklogItems(prev =>
+        prev.map(item =>
+          item.id === itemId
+            ? {
+                ...item,
+                metadata_fields: {
+                  ...item.metadata_fields,
+                  acceptance_criteria: data.acceptance_criteria
+                }
+              }
+            : item
+        )
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
+  const handleGenerateWireframe = async (itemId: string) => {
+    if (!activeWorkspace) return;
+    setGeneratingId(itemId);
+    try {
+      const data = await apiService.post<{ wireframe_suggestions: string }>(
+        `/planning/backlog/items/${itemId}/wireframe?workspace_id=${activeWorkspace.id}`
+      );
+      setBacklogItems(prev =>
+        prev.map(item =>
+          item.id === itemId
+            ? {
+                ...item,
+                metadata_fields: {
+                  ...item.metadata_fields,
+                  wireframe_suggestions: data.wireframe_suggestions
+                }
+              }
+            : item
+        )
+      );
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   // Input states
   const [newGoalName, setNewGoalName] = React.useState('');
@@ -445,7 +503,7 @@ export default function PlanningDashboard() {
 
         {/* Tab Controls */}
         <div className="flex space-x-1 border-b border-zinc-900 pb-px">
-          {(['goals', 'backlog', 'dependencies', 'simulations', 'compressor'] as const).map((tab) => (
+          {(['goals', 'backlog', 'kanban', 'dependencies', 'simulations', 'compressor'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -591,7 +649,7 @@ export default function PlanningDashboard() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-zinc-400 font-semibold">Select Associated Goals</label>
-                    <div className="flex flex-wrap gap-1 p-2 border border-zinc-805 rounded-lg bg-zinc-900 min-h-[42px] max-h-24 overflow-y-auto">
+                    <div className="flex flex-wrap gap-1 p-2 border border-zinc-800 rounded-lg bg-zinc-900 min-h-[42px] max-h-24 overflow-y-auto">
                       {goals.map((g) => {
                         const isSelected = selectedGoalIds.includes(g.id);
                         return (
@@ -725,34 +783,95 @@ export default function PlanningDashboard() {
                 </button>
               </CardHeader>
               <CardContent className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                {backlogItems.map((item) => (
-                  <div key={item.id} className="p-3 border border-zinc-900 bg-zinc-950/50 rounded-lg flex items-center justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
-                          item.type === 'Epic' ? 'bg-amber-950 border border-amber-900/50 text-amber-400' :
-                          item.type === 'Feature' ? 'bg-blue-950 border border-blue-900/50 text-blue-400' :
-                          'bg-zinc-900 border border-zinc-800 text-zinc-400'
-                        }`}>
-                          {item.type}
-                        </span>
-                        <h4 className="text-xs font-bold text-white">{item.title}</h4>
+                {backlogItems.map((item) => {
+                  const isExpanded = expandedItem === item.id;
+                  const hasCriteria = !!item.metadata_fields?.acceptance_criteria;
+                  const hasWireframe = !!item.metadata_fields?.wireframe_suggestions;
+
+                  return (
+                    <div key={item.id} className="border border-zinc-900 bg-zinc-950/50 rounded-lg overflow-hidden transition-all">
+                      <div 
+                        onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                        className="p-3 flex items-center justify-between cursor-pointer hover:bg-zinc-900/20 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
+                              item.type === 'Epic' ? 'bg-amber-950 border border-amber-900/50 text-amber-400' :
+                              item.type === 'Feature' ? 'bg-blue-950 border border-blue-900/50 text-blue-400' :
+                              'bg-zinc-900 border border-zinc-800 text-zinc-400'
+                            }`}>
+                              {item.type}
+                            </span>
+                            <h4 className="text-xs font-bold text-white">{item.title}</h4>
+                          </div>
+                          <p className="text-[11px] text-zinc-400 line-clamp-1">{item.description}</p>
+                          
+                          {/* Scheduled timeline if existing */}
+                          {item.metadata_fields && item.metadata_fields.scheduled_start && item.metadata_fields.scheduled_end && (
+                            <div className="text-[10px] text-indigo-400 font-semibold flex items-center space-x-1 mt-1">
+                              <CalendarDays size={12} />
+                              <span>{new Date(item.metadata_fields.scheduled_start).toLocaleDateString()} - {new Date(item.metadata_fields.scheduled_end).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-3 shrink-0">
+                          <span className="text-[10px] font-bold text-zinc-400">{item.estimated_hours}h</span>
+                          <span className="text-[10px] text-zinc-600">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-zinc-400 line-clamp-1">{item.description}</p>
-                      
-                      {/* Scheduled timeline if existing */}
-                      {item.metadata_fields && item.metadata_fields.scheduled_start && item.metadata_fields.scheduled_end && (
-                        <div className="text-[10px] text-indigo-400 font-semibold flex items-center space-x-1 mt-1">
-                          <CalendarDays size={12} />
-                          <span>{new Date(item.metadata_fields.scheduled_start).toLocaleDateString()} - {new Date(item.metadata_fields.scheduled_end).toLocaleDateString()}</span>
+
+                      {isExpanded && (
+                        <div className="px-3 pb-4 pt-1 border-t border-zinc-900/60 bg-zinc-900/10 space-y-4 text-xs">
+                          <div>
+                            <div className="text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider mb-1">Description</div>
+                            <div className="text-zinc-300 leading-relaxed">{item.description}</div>
+                          </div>
+
+                          {/* Given-When-Then Acceptance Criteria */}
+                          <div className="p-3 bg-zinc-950/80 border border-zinc-900 rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider">Acceptance Criteria (Given-When-Then)</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGenerateAcceptanceCriteria(item.id);
+                                }}
+                                disabled={generatingId === item.id}
+                                className="text-[10px] px-2.5 py-1 rounded bg-indigo-600/15 border border-indigo-500/30 text-indigo-350 hover:bg-indigo-600/30 transition disabled:opacity-50"
+                              >
+                                {generatingId === item.id ? 'Generating...' : hasCriteria ? 'Regenerate' : 'Generate via AI'}
+                              </button>
+                            </div>
+                            <pre className="text-[11px] text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed mt-1">
+                              {item.metadata_fields?.acceptance_criteria || 'No acceptance criteria generated yet.'}
+                            </pre>
+                          </div>
+
+                          {/* UX Wireframe layout suggestions */}
+                          <div className="p-3 bg-zinc-950/80 border border-zinc-900 rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider">UX Wireframe Suggestions</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGenerateWireframe(item.id);
+                                }}
+                                disabled={generatingId === item.id}
+                                className="text-[10px] px-2.5 py-1 rounded bg-violet-600/15 border border-violet-500/30 text-violet-350 hover:bg-violet-600/30 transition disabled:opacity-50"
+                              >
+                                {generatingId === item.id ? 'Generating...' : hasWireframe ? 'Regenerate' : 'Generate via AI'}
+                              </button>
+                            </div>
+                            <pre className="text-[11px] text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed mt-1">
+                              {item.metadata_fields?.wireframe_suggestions || 'No wireframe suggestions generated yet.'}
+                            </pre>
+                          </div>
                         </div>
                       )}
                     </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-zinc-400">{item.estimated_hours}h</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {backlogItems.length === 0 && (
                   <div className="text-center py-16 text-xs text-zinc-600">No backlog items decomposed. Enter a vision or apply a template below.</div>
                 )}
@@ -783,6 +902,138 @@ export default function PlanningDashboard() {
                 ))}
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* TAB: Kanban Sprint Board */}
+        {activeTab === 'kanban' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-200">
+            {(['Todo', 'In Progress', 'Blocked', 'Done'] as const).map((colStatus) => {
+              const itemsInCol = backlogItems.filter(item => item.status === colStatus);
+              return (
+                <div key={colStatus} className="flex flex-col h-[700px] border border-zinc-900 bg-zinc-950/20 rounded-2xl p-4 space-y-4">
+                  <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                      <span className={`h-2 w-2 rounded-full ${
+                        colStatus === 'Todo' ? 'bg-zinc-500' :
+                        colStatus === 'In Progress' ? 'bg-indigo-400' :
+                        colStatus === 'Blocked' ? 'bg-red-400' :
+                        'bg-emerald-400'
+                      }`} />
+                      {colStatus}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 font-bold text-zinc-400">
+                      {itemsInCol.length}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                    {itemsInCol.map((item) => {
+                      const isExpanded = expandedItem === item.id;
+                      const hasCriteria = !!item.metadata_fields?.acceptance_criteria;
+                      const hasWireframe = !!item.metadata_fields?.wireframe_suggestions;
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                          className={`p-4 border rounded-xl bg-zinc-950/60 cursor-pointer hover:border-zinc-700 transition space-y-3 ${
+                            isExpanded ? 'border-indigo-600/80 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'border-zinc-900/80'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                              item.type === 'Epic' ? 'bg-amber-950 border border-amber-900/50 text-amber-450' :
+                              item.type === 'Feature' ? 'bg-blue-950 border border-blue-900/50 text-blue-450' :
+                              'bg-zinc-900 border border-zinc-800 text-zinc-400'
+                            }`}>
+                              {item.type}
+                            </span>
+                            <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                              item.priority === 'High' ? 'bg-red-950 text-red-400' :
+                              item.priority === 'Medium' ? 'bg-amber-950 text-amber-400' :
+                              'bg-zinc-900 text-zinc-450'
+                            }`}>
+                              {item.priority}
+                            </span>
+                          </div>
+
+                          <h4 className="text-xs font-bold text-white leading-tight">{item.title}</h4>
+                          <p className="text-[10px] text-zinc-400 line-clamp-2 leading-relaxed">{item.description}</p>
+
+                          <div className="flex items-center justify-between text-[10px] text-zinc-550 pt-2 border-t border-zinc-900/60">
+                            <span>{item.estimated_hours}h</span>
+                            <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={item.status}
+                                onChange={async (e) => {
+                                  const newStatus = e.target.value as 'Todo' | 'In Progress' | 'Blocked' | 'Done';
+                                  if (!activeWorkspace) return;
+                                  try {
+                                    const updated = await apiService.put<PlanningItem>(
+                                      `/planning/backlog/items/${item.id}?workspace_id=${activeWorkspace.id}`,
+                                      { status: newStatus }
+                                    );
+                                    setBacklogItems(prev => prev.map(x => x.id === item.id ? updated : x));
+                                  } catch (err) {
+                                    console.error(err);
+                                  }
+                                }}
+                                className="bg-zinc-900 border border-zinc-800 rounded px-1.5 py-0.5 text-[9px] text-zinc-450 focus:outline-none focus:border-zinc-700 font-bold"
+                              >
+                                <option value="Todo">Todo</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Blocked">Blocked</option>
+                                <option value="Done">Done</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="space-y-3 pt-2 text-[10px] leading-relaxed border-t border-zinc-900/60" onClick={(e) => e.stopPropagation()}>
+                              <div className="bg-zinc-950 border border-zinc-900 rounded p-2.5 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-extrabold text-zinc-500 uppercase tracking-wider">Acceptance Criteria</span>
+                                  <button
+                                    onClick={() => handleGenerateAcceptanceCriteria(item.id)}
+                                    disabled={generatingId === item.id}
+                                    className="px-1.5 py-0.5 rounded bg-indigo-600/15 border border-indigo-500/30 text-indigo-350 hover:bg-indigo-600/30 transition disabled:opacity-50"
+                                  >
+                                    {generatingId === item.id ? 'Generating...' : hasCriteria ? 'Regen' : 'AI Gen'}
+                                  </button>
+                                </div>
+                                <pre className="text-[9px] text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed max-h-24 overflow-y-auto">
+                                  {item.metadata_fields?.acceptance_criteria || 'No acceptance criteria generated.'}
+                                </pre>
+                              </div>
+
+                              <div className="bg-zinc-950 border border-zinc-900 rounded p-2.5 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-extrabold text-zinc-500 uppercase tracking-wider">UX Wireframe</span>
+                                  <button
+                                    onClick={() => handleGenerateWireframe(item.id)}
+                                    disabled={generatingId === item.id}
+                                    className="px-1.5 py-0.5 rounded bg-violet-600/15 border border-violet-500/30 text-violet-350 hover:bg-violet-600/30 transition disabled:opacity-50"
+                                  >
+                                    {generatingId === item.id ? 'Generating...' : hasWireframe ? 'Regen' : 'AI Gen'}
+                                  </button>
+                                </div>
+                                <pre className="text-[9px] text-zinc-400 whitespace-pre-wrap font-mono leading-relaxed max-h-24 overflow-y-auto">
+                                  {item.metadata_fields?.wireframe_suggestions || 'No wireframe suggestions generated.'}
+                                </pre>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {itemsInCol.length === 0 && (
+                      <div className="text-center py-20 text-[10px] text-zinc-655 italic">No tasks in this column.</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -880,7 +1131,7 @@ export default function PlanningDashboard() {
                   <div key={sim.id} className="p-5 border border-zinc-900 bg-zinc-950/40 rounded-xl space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-white text-base">{sim.name}</h4>
-                      <span className="text-[10px] text-zinc-500">{new Date().toLocaleDateString()}</span>
+                      <span className="text-[10px] text-zinc-500">{sim.created_at ? new Date(sim.created_at).toLocaleDateString() : ''}</span>
                     </div>
 
                     {/* Timeline forecast */}

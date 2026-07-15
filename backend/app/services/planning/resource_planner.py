@@ -29,6 +29,7 @@ class ResourcePlanner:
             db.query(PlanningItem)
             .filter(
                 PlanningItem.id == epic_id,
+                PlanningItem.workspace_id == workspace_id,
                 PlanningItem.type == "Epic",
                 PlanningItem.deleted_at.is_(None),
             )
@@ -36,7 +37,15 @@ class ResourcePlanner:
         )
 
         if not epic:
-            raise ValueError("Epic not found or not of type Epic")
+            raise ValueError("Epic not found or not of type Epic in this workspace")
+
+        from app.ai.utils.security import AISecurityManager
+        # Sanitize and scan for prompt injection
+        epic_title = AISecurityManager.sanitize_input(epic.title)
+        epic_desc = AISecurityManager.sanitize_input(epic.description or "")
+        AISecurityManager.verify_prompt_injection(epic_title)
+        if epic_desc:
+            AISecurityManager.verify_prompt_injection(epic_desc)
 
         prompt = [
             {
@@ -56,7 +65,7 @@ class ResourcePlanner:
             },
             {
                 "role": "user",
-                "content": f"Estimate resources for Epic: '{epic.title}'\nDescription: {epic.description or 'No description'}",
+                "content": f"Estimate resources for Epic: '{epic_title}'\nDescription: {epic_desc or 'No description'}",
             },
         ]
 
@@ -93,28 +102,26 @@ class ResourcePlanner:
         return req
 
     def get_resource_plan(
-        self, db: Session, req_id: UUID
+        self, db: Session, req_id: UUID, workspace_id: UUID | None = None
     ) -> ResourceRequirement | None:
-        return (
-            db.query(ResourceRequirement)
-            .filter(
-                ResourceRequirement.id == req_id,
-                ResourceRequirement.deleted_at.is_(None),
-            )
-            .first()
+        query = db.query(ResourceRequirement).filter(
+            ResourceRequirement.id == req_id,
+            ResourceRequirement.deleted_at.is_(None),
         )
+        if workspace_id:
+            query = query.filter(ResourceRequirement.workspace_id == workspace_id)
+        return query.first()
 
     def get_epic_resource_plan(
-        self, db: Session, epic_id: UUID
+        self, db: Session, epic_id: UUID, workspace_id: UUID | None = None
     ) -> ResourceRequirement | None:
-        return (
-            db.query(ResourceRequirement)
-            .filter(
-                ResourceRequirement.epic_id == epic_id,
-                ResourceRequirement.deleted_at.is_(None),
-            )
-            .first()
+        query = db.query(ResourceRequirement).filter(
+            ResourceRequirement.epic_id == epic_id,
+            ResourceRequirement.deleted_at.is_(None),
         )
+        if workspace_id:
+            query = query.filter(ResourceRequirement.workspace_id == workspace_id)
+        return query.first()
 
     def list_workspace_resource_plans(
         self, db: Session, workspace_id: UUID

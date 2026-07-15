@@ -11,6 +11,7 @@ class DocumentVersion(BaseEntity):
         Uuid,
         ForeignKey("documents.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     version_number = Column(Integer, nullable=False)
     filename = Column(String(512), nullable=False)

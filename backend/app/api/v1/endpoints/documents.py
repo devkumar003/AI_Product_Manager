@@ -129,7 +129,7 @@ def get_document(
         require_workspace_permission(Permission.WORKSPACE_READ)
     ),
 ) -> Document:
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -147,7 +147,7 @@ def download_document(
         require_workspace_permission(Permission.WORKSPACE_READ)
     ),
 ):
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -180,7 +180,7 @@ def update_document(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Document:
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -212,7 +212,7 @@ async def upload_new_version(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Document:
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -256,7 +256,7 @@ def restore_document_version(
         require_workspace_permission(Permission.WORKSPACE_WRITE)
     ),
 ) -> Document:
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -294,7 +294,7 @@ def delete_document(
         require_workspace_permission(Permission.WORKSPACE_DELETE)
     ),
 ) -> Document:
-    doc = document_repo.get(db, document_id)
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
     if not doc or doc.workspace_id != workspace_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

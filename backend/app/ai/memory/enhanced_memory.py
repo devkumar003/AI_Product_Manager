@@ -10,9 +10,11 @@ Extends the existing memory foundation with:
 """
 
 import time
+import json
 from typing import Any
 
 from app.ai.memory.memory_manager import BaseMemory
+from app.core.redis import cache_manager
 
 
 class ProjectMemory(BaseMemory):
@@ -22,7 +24,13 @@ class ProjectMemory(BaseMemory):
         self._store: dict[str, list[dict[str, str]]] = {}
 
     async def get_context(self, key: str, **kwargs: Any) -> list[dict[str, str]]:
-        entries = self._store.get(key, [])
+        cache_key = f"project_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            entries = json.loads(cached) if cached else []
+        except Exception:
+            entries = self._store.get(key, [])
+
         if not entries:
             return []
         context_lines = [f"- {e.get('content', '')}" for e in entries[-20:]]
@@ -34,15 +42,33 @@ class ProjectMemory(BaseMemory):
         ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
-        if key not in self._store:
-            self._store[key] = []
-        entries = data if isinstance(data, list) else [data]
-        for entry in entries:
+        cache_key = f"project_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            entries = json.loads(cached) if cached else []
+        except Exception:
+            entries = self._store.get(key, [])
+
+        new_entries = data if isinstance(data, list) else [data]
+        for entry in new_entries:
             if isinstance(entry, dict):
                 entry.setdefault("timestamp", time.time())
-                self._store[key].append(entry)
+                entries.append(entry)
+
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(entries), expire_seconds=86400
+            )
+        except Exception:
+            pass
+        self._store[key] = entries
 
     async def clear(self, key: str) -> None:
+        cache_key = f"project_memory:{key}"
+        try:
+            await cache_manager.delete(cache_key)
+        except Exception:
+            pass
         if key in self._store:
             del self._store[key]
 
@@ -57,7 +83,13 @@ class LongTermMemory(BaseMemory):
         self._store: dict[str, list[dict[str, Any]]] = {}
 
     async def get_context(self, key: str, **kwargs: Any) -> list[dict[str, str]]:
-        entries = self._store.get(key, [])
+        cache_key = f"long_term_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            entries = json.loads(cached) if cached else []
+        except Exception:
+            entries = self._store.get(key, [])
+
         if not entries:
             return []
         # Sort by relevance score descending, take top entries
@@ -69,17 +101,35 @@ class LongTermMemory(BaseMemory):
         ]
 
     async def store(self, key: str, data: Any, **kwargs: Any) -> None:
-        if key not in self._store:
-            self._store[key] = []
-        entries = data if isinstance(data, list) else [data]
-        for entry in entries:
+        cache_key = f"long_term_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            entries = json.loads(cached) if cached else []
+        except Exception:
+            entries = self._store.get(key, [])
+
+        new_entries = data if isinstance(data, list) else [data]
+        for entry in new_entries:
             if isinstance(entry, dict):
                 entry.setdefault("timestamp", time.time())
                 entry.setdefault("relevance", 0.5)
                 entry.setdefault("category", "fact")
-                self._store[key].append(entry)
+                entries.append(entry)
+
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(entries), expire_seconds=604800
+            )  # 7 days
+        except Exception:
+            pass
+        self._store[key] = entries
 
     async def clear(self, key: str) -> None:
+        cache_key = f"long_term_memory:{key}"
+        try:
+            await cache_manager.delete(cache_key)
+        except Exception:
+            pass
         if key in self._store:
             del self._store[key]
 
@@ -87,11 +137,25 @@ class LongTermMemory(BaseMemory):
         self, key: str, content_fragment: str, boost: float = 0.1
     ) -> None:
         """Increase relevance of entries matching a content fragment."""
-        entries = self._store.get(key, [])
+        cache_key = f"long_term_memory:{key}"
+        try:
+            cached = await cache_manager.get(cache_key)
+            entries = json.loads(cached) if cached else []
+        except Exception:
+            entries = self._store.get(key, [])
+
         fragment_lower = content_fragment.lower()
         for entry in entries:
             if fragment_lower in entry.get("content", "").lower():
                 entry["relevance"] = min(1.0, entry.get("relevance", 0.5) + boost)
+
+        try:
+            await cache_manager.set(
+                cache_key, json.dumps(entries), expire_seconds=604800
+            )
+        except Exception:
+            pass
+        self._store[key] = entries
 
 
 class MemoryRetriever:

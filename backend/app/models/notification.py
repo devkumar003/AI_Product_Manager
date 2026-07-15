@@ -11,6 +11,7 @@ class Notification(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     type = Column(
         String(50), default="Info", nullable=False

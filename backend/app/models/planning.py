@@ -20,6 +20,7 @@ class Goal(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     name = Column(String(255), nullable=False)
     description = Column(String(2048), nullable=True)
@@ -43,6 +44,7 @@ class Mission(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     description = Column(String(2048), nullable=True)
@@ -70,16 +72,19 @@ class PlanningItem(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     project_id = Column(
         Uuid,
         ForeignKey("projects.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     parent_id = Column(
         Uuid,
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     type = Column(String(50), nullable=False)  # Epic, Feature, UserStory, Task, Subtask
     title = Column(String(255), nullable=False)
@@ -113,16 +118,19 @@ class PlanningDependency(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     source_item_id = Column(
         Uuid,
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     target_item_id = Column(
         Uuid,
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     dependency_type = Column(
         String(50), default="Blocker", nullable=False
@@ -140,6 +148,7 @@ class ExecutionQueueItem(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     task_name = Column(String(255), nullable=False)
     payload = Column(JSON, default=dict, nullable=False)
@@ -163,6 +172,7 @@ class ScenarioSimulation(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     name = Column(String(255), nullable=False)
     vision = Column(String(4096), nullable=False)
@@ -182,11 +192,13 @@ class ResourceRequirement(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     epic_id = Column(
         Uuid,
         ForeignKey("planning_items.id", ondelete="CASCADE"),
         nullable=True,
+        index=True,
     )
     developer_count = Column(Integer, default=0, nullable=False)
     qa_count = Column(Integer, default=0, nullable=False)
@@ -206,6 +218,7 @@ class PlanningAnalytics(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     accuracy_rate = Column(Float, default=0.0, nullable=False)
     completion_rate = Column(Float, default=0.0, nullable=False)

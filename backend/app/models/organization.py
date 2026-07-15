@@ -11,7 +11,7 @@ class Organization(BaseEntity):
     slug = Column(String(255), unique=True, index=True, nullable=False)
     description = Column(String(1024), nullable=True)
     logo = Column(String(1024), nullable=True)
-    owner_id = Column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    owner_id = Column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     plan = Column(String(50), default="free", nullable=False)
     status = Column(String(50), default="active", nullable=False)
 

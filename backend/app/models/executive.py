@@ -17,6 +17,7 @@ class CEOReport(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     strategy_data = Column(
@@ -49,6 +50,7 @@ class CTOReport(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     architecture_review = Column(
@@ -78,6 +80,7 @@ class COOReport(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     title = Column(String(255), nullable=False)
     resource_capacity = Column(

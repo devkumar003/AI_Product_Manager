@@ -348,9 +348,47 @@ async def list_workflows(
 @router.post("/chat", status_code=status.HTTP_200_OK)
 async def chat(
     req: ChatRequest,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> AIResponse:
+):
     """AI chat with full context awareness."""
+    from app.models.chat import ChatMessage
+    from uuid import UUID
+
+    # Verify workspace membership
+    try:
+        ws_uuid = UUID(req.workspace_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400, detail="Invalid workspace ID format"
+        ) from e
+    membership = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == current_user.id,
+            Membership.workspace_id == ws_uuid,
+            Membership.deleted_at.is_(None),
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions for this workspace",
+        )
+
+    # 1. Save user message to database
+    proj_uuid = UUID(req.project_id) if req.project_id else None
+    user_msg = ChatMessage(
+        workspace_id=ws_uuid,
+        user_id=current_user.id,
+        project_id=proj_uuid,
+        sender="user",
+        message=req.message,
+    )
+    db.add(user_msg)
+    db.commit()
+
     try:
         if req.stream:
             token_iter = chat_engine.chat_stream(
@@ -366,7 +404,8 @@ async def chat(
                 streaming_engine.sse_event_generator(token_iter),
                 media_type="text/event-stream",
             )
-        return await chat_engine.chat(
+
+        response = await chat_engine.chat(
             workspace_id=req.workspace_id,
             user_id=str(current_user.id),
             message=req.message,
@@ -376,8 +415,66 @@ async def chat(
             temperature=req.temperature,
             system_prompt_override=req.system_prompt_override,
         )
+
+        # 2. Save assistant response to database
+        assistant_msg = ChatMessage(
+            workspace_id=ws_uuid,
+            user_id=current_user.id,
+            project_id=proj_uuid,
+            sender="assistant",
+            message=response.content,
+        )
+        db.add(assistant_msg)
+        db.commit()
+
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
+
+@router.get("/chat/history/{workspace_id}", status_code=status.HTTP_200_OK)
+async def get_chat_history(
+    workspace_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get chat history for a workspace."""
+    from app.models.chat import ChatMessage
+    # Verify workspace membership
+    membership = (
+        db.query(Membership)
+        .filter(
+            Membership.user_id == current_user.id,
+            Membership.workspace_id == workspace_id,
+            Membership.deleted_at.is_(None),
+        )
+        .first()
+    )
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions for this workspace",
+        )
+
+    messages = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.workspace_id == workspace_id,
+            ChatMessage.deleted_at.is_(None),
+        )
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
+    return [
+        {
+            "id": str(m.id),
+            "sender": m.sender,
+            "message": m.message,
+            "created_at": m.created_at.isoformat(),
+        }
+        for m in messages
+    ]
+
 
 
 # ══════════════════════════════════════════════════
@@ -526,7 +623,7 @@ async def get_ai_token_usage_summary(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """Get FinOps token consumption summary and quota status for the workspace."""
-    from app.services.ai.ai_usage_service import ai_usage_service
+    from app.services.ai_usage_service import ai_usage_service
 
     try:
         ws_uuid = UUID(workspace_id)

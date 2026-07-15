@@ -11,8 +11,8 @@ from app.models.development import (
     CodeReview,
     RefactoringProposal,
 )
-from app.services.ai.agents.base import AgentConfig
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import AgentConfig
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.development.quality_engine")
 

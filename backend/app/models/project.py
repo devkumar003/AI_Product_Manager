@@ -11,6 +11,7 @@ class Project(BaseEntity):
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     name = Column(String(255), nullable=False)
     description = Column(String(1024), nullable=True)
@@ -23,6 +24,7 @@ class Project(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     archived = Column(Boolean, default=False, nullable=False)
 

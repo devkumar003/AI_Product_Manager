@@ -30,10 +30,11 @@ class GoalManager:
         db.refresh(goal)
         return goal
 
-    def get_goal(self, db: Session, goal_id: UUID) -> Goal | None:
-        return (
-            db.query(Goal).filter(Goal.id == goal_id, Goal.deleted_at.is_(None)).first()
-        )
+    def get_goal(self, db: Session, goal_id: UUID, workspace_id: UUID | None = None) -> Goal | None:
+        query = db.query(Goal).filter(Goal.id == goal_id, Goal.deleted_at.is_(None))
+        if workspace_id:
+            query = query.filter(Goal.workspace_id == workspace_id)
+        return query.first()
 
     def list_workspace_goals(
         self, db: Session, workspace_id: UUID, goal_type: str | None = None
@@ -46,9 +47,9 @@ class GoalManager:
         return query.all()
 
     def update_goal(
-        self, db: Session, goal_id: UUID, goal_in: GoalUpdate
+        self, db: Session, goal_id: UUID, goal_in: GoalUpdate, workspace_id: UUID | None = None
     ) -> Goal | None:
-        goal = self.get_goal(db, goal_id)
+        goal = self.get_goal(db, goal_id, workspace_id)
         if not goal:
             return None
 
@@ -62,8 +63,8 @@ class GoalManager:
         db.refresh(goal)
         return goal
 
-    def delete_goal(self, db: Session, goal_id: UUID) -> bool:
-        goal = self.get_goal(db, goal_id)
+    def delete_goal(self, db: Session, goal_id: UUID, workspace_id: UUID | None = None) -> bool:
+        goal = self.get_goal(db, goal_id, workspace_id)
         if not goal:
             return False
         goal.deleted_at = datetime.utcnow()

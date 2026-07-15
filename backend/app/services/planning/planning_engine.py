@@ -107,11 +107,14 @@ class PlanningEngine:
                 ]
             }
 
+        import uuid
         created_items = []
 
         # Recursively save the hierarchy
         for epic_data in data.get("epics", []):
+            epic_id = uuid.uuid4()
             epic = PlanningItem(
+                id=epic_id,
                 workspace_id=workspace_id,
                 project_id=project_id,
                 type="Epic",
@@ -123,15 +126,15 @@ class PlanningEngine:
                 assigned_roles=epic_data.get("assigned_roles", []),
             )
             db.add(epic)
-            db.commit()
-            db.refresh(epic)
             created_items.append(epic)
 
             for feat_data in epic_data.get("features", []):
+                feature_id = uuid.uuid4()
                 feature = PlanningItem(
+                    id=feature_id,
                     workspace_id=workspace_id,
                     project_id=project_id,
-                    parent_id=epic.id,
+                    parent_id=epic_id,
                     type="Feature",
                     title=feat_data["title"],
                     description=feat_data.get("description"),
@@ -141,15 +144,15 @@ class PlanningEngine:
                     assigned_roles=feat_data.get("assigned_roles", []),
                 )
                 db.add(feature)
-                db.commit()
-                db.refresh(feature)
                 created_items.append(feature)
 
                 for story_data in feat_data.get("user_stories", []):
+                    story_id = uuid.uuid4()
                     story = PlanningItem(
+                        id=story_id,
                         workspace_id=workspace_id,
                         project_id=project_id,
-                        parent_id=feature.id,
+                        parent_id=feature_id,
                         type="UserStory",
                         title=story_data["title"],
                         description=story_data.get("description"),
@@ -159,15 +162,15 @@ class PlanningEngine:
                         assigned_roles=story_data.get("assigned_roles", []),
                     )
                     db.add(story)
-                    db.commit()
-                    db.refresh(story)
                     created_items.append(story)
 
                     for task_data in story_data.get("tasks", []):
+                        task_id = uuid.uuid4()
                         task = PlanningItem(
+                            id=task_id,
                             workspace_id=workspace_id,
                             project_id=project_id,
-                            parent_id=story.id,
+                            parent_id=story_id,
                             type="Task",
                             title=task_data["title"],
                             description=task_data.get("description"),
@@ -179,15 +182,15 @@ class PlanningEngine:
                             assigned_roles=task_data.get("assigned_roles", []),
                         )
                         db.add(task)
-                        db.commit()
-                        db.refresh(task)
                         created_items.append(task)
 
                         for sub_data in task_data.get("subtasks", []):
+                            subtask_id = uuid.uuid4()
                             subtask = PlanningItem(
+                                id=subtask_id,
                                 workspace_id=workspace_id,
                                 project_id=project_id,
-                                parent_id=task.id,
+                                parent_id=task_id,
                                 type="Subtask",
                                 title=sub_data["title"],
                                 description=sub_data.get("description"),
@@ -199,9 +202,11 @@ class PlanningEngine:
                                 assigned_roles=sub_data.get("assigned_roles", []),
                             )
                             db.add(subtask)
-                            db.commit()
-                            db.refresh(subtask)
                             created_items.append(subtask)
+
+        db.commit()
+        for item in created_items:
+            db.refresh(item)
 
         return created_items
 

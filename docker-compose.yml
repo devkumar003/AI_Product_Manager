@@ -6,8 +6,10 @@ services:
     restart: always
     env_file:
       - ./backend/.env
+    # Bind to 127.0.0.1 to avoid exposing the database publicly to the external network
+    # while still allowing developers to connect from their local host machine.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -23,8 +25,9 @@ services:
     container_name: ai_product_redis
     restart: always
     command: redis-server --loglevel warning
+    # Bind to 127.0.0.1 to prevent public cache access and allow local developer access.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:

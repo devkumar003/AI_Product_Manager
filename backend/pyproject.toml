@@ -21,3 +21,12 @@ ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+pythonPlatform = "Windows"
+
+typeCheckingMode = "off"
+
+
+

@@ -3,7 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_current_active_user, get_db
@@ -20,6 +20,7 @@ from app.schemas.planning import (
     PlanningAnalyticsResponse,
     PlanningItemCreate,
     PlanningItemResponse,
+    PlanningItemUpdate,
     ResourceRequirementResponse,
     ScenarioSimulationCreate,
     ScenarioSimulationResponse,
@@ -37,6 +38,9 @@ from app.services.planning import (
     scenario_simulator,
     workspace_intelligence,
 )
+import logging
+
+logger = logging.getLogger("app.api.planning")
 
 router = APIRouter()
 
@@ -96,7 +100,7 @@ def update_goal(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     _verify_workspace_membership(db, current_user.id, workspace_id)
-    goal = goal_manager.update_goal(db, goal_id, goal_in)
+    goal = goal_manager.update_goal(db, goal_id, goal_in, workspace_id)
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
     return goal
@@ -110,7 +114,7 @@ def delete_goal(
     current_user: User = Depends(get_current_active_user),
 ):
     _verify_workspace_membership(db, current_user.id, workspace_id)
-    success = goal_manager.delete_goal(db, goal_id)
+    success = goal_manager.delete_goal(db, goal_id, workspace_id)
     if not success:
         raise HTTPException(status_code=404, detail="Goal not found")
     from fastapi import Response
@@ -165,7 +169,7 @@ def list_missions(
 
 class BacklogGenerateRequest(BaseModel):
     project_id: UUID | None = None
-    vision: str
+    vision: str = Field(..., min_length=1, max_length=10000)
 
 
 @router.post("/backlog/generate", response_model=list[PlanningItemResponse])
@@ -227,6 +231,120 @@ def create_backlog_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.put("/backlog/items/{item_id}", response_model=PlanningItemResponse)
+def update_backlog_item(
+    workspace_id: UUID,
+    item_id: UUID,
+    item_in: PlanningItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    from app.models.planning import PlanningItem
+    
+    item = db.query(PlanningItem).filter(
+        PlanningItem.id == item_id,
+        PlanningItem.workspace_id == workspace_id
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Planning item not found")
+        
+    update_data = item_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(item, field, value)
+        
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.post("/backlog/items/{item_id}/acceptance-criteria")
+async def generate_acceptance_criteria(
+    workspace_id: UUID,
+    item_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    from app.models.planning import PlanningItem
+    from app.services.ai.llm_manager import LLMManager
+    
+    item = db.query(PlanningItem).filter(PlanningItem.id == item_id, PlanningItem.workspace_id == workspace_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Planning item not found")
+        
+    llm = LLMManager()
+    prompt = (
+        "You are an expert Agile Product Manager.\n"
+        f"Generate precise 'Given-When-Then' Acceptance Criteria for this user story:\n"
+        f"Title: {item.title}\n"
+        f"Description: {item.description}\n"
+        "Provide 2-3 standard Given-When-Then scenarios. Return plain text formatted nicely."
+    )
+    criteria_text = await llm.generate(
+        messages=[{"role": "user", "content": prompt}],
+        model="gemini-1.5-pro",
+        provider="gemini",
+    )
+    
+    if not item.metadata_fields:
+        item.metadata_fields = {}
+    
+    meta = dict(item.metadata_fields)
+    meta["acceptance_criteria"] = criteria_text
+    item.metadata_fields = meta
+    
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    
+    return {"acceptance_criteria": criteria_text}
+
+
+@router.post("/backlog/items/{item_id}/wireframe")
+async def generate_wireframe(
+    workspace_id: UUID,
+    item_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    from app.models.planning import PlanningItem
+    from app.services.ai.llm_manager import LLMManager
+    
+    item = db.query(PlanningItem).filter(PlanningItem.id == item_id, PlanningItem.workspace_id == workspace_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Planning item not found")
+        
+    llm = LLMManager()
+    prompt = (
+        "You are a Senior UX/UI Architect.\n"
+        f"Generate UX Wireframe Suggestions / layout recommendation for this user story / feature:\n"
+        f"Title: {item.title}\n"
+        f"Description: {item.description}\n"
+        "Provide structural UI recommendations (e.g. Header, Sidebar, Canvas, Settings drawer layout structure). Return plain text formatted nicely."
+    )
+    wireframe_text = await llm.generate(
+        messages=[{"role": "user", "content": prompt}],
+        model="gemini-1.5-pro",
+        provider="gemini",
+    )
+    
+    if not item.metadata_fields:
+        item.metadata_fields = {}
+        
+    meta = dict(item.metadata_fields)
+    meta["wireframe_suggestions"] = wireframe_text
+    item.metadata_fields = meta
+    
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    
+    return {"wireframe_suggestions": wireframe_text}
 
 
 # ══════════════════════════════════════════════════
@@ -486,3 +604,336 @@ async def compress_messages(
         raise HTTPException(
             status_code=500, detail=f"Failed to compress messages: {str(e)}"
         ) from e
+
+
+# ══════════════════════════════════════════════════
+# 11. Standalone Intelligence Suite Endpoints
+# ══════════════════════════════════════════════════
+
+class MarketResearchResponse(BaseModel):
+    industry: str
+    pestle: str
+    swot: str
+
+class CompetitorMatrixResponse(BaseModel):
+    competitors: list[str]
+    matrix_markdown: str
+
+class CostEstimateResponse(BaseModel):
+    total_developers: int
+    total_qa: int
+    total_designers: int
+    monthly_infra_cost: float
+    monthly_ai_cost: float
+    total_monthly_burn: float
+    forecast_3yr_markdown: str
+
+class RiskMatrixItem(BaseModel):
+    category: str
+    severity: str
+    description: str
+    mitigation: str
+
+class RiskAnalysisResponse(BaseModel):
+    overall_status: str
+    risks: list[RiskMatrixItem]
+
+
+from fastapi import Query
+from app.models.insight import WorkspaceInsight
+
+@router.post("/intelligence/market-research", response_model=MarketResearchResponse)
+async def generate_market_research(
+    workspace_id: UUID,
+    refresh: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    
+    if not refresh:
+        existing = db.query(WorkspaceInsight).filter(
+            WorkspaceInsight.workspace_id == workspace_id,
+            WorkspaceInsight.category == "market_research",
+            WorkspaceInsight.deleted_at.is_(None)
+        ).first()
+        if existing:
+            return MarketResearchResponse(**existing.payload)
+
+    from app.models.workspace import Workspace
+    from app.services.executive.ceo import ceo_service
+    
+    ws = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    idea = ws.description if ws and ws.description else f"A product named {ws.name}"
+    
+    pestle_res = ceo_service.run_pestle_analysis(idea)
+    swot_res = ceo_service.run_swot_analysis(idea)
+    
+    payload = {
+        "industry": "Technology & SaaS",
+        "pestle": pestle_res.get("pestle_markdown", "PESTLE details"),
+        "swot": swot_res.get("swot_markdown", "SWOT details")
+    }
+
+    # Persist or update cache
+    existing = db.query(WorkspaceInsight).filter(
+        WorkspaceInsight.workspace_id == workspace_id,
+        WorkspaceInsight.category == "market_research",
+        WorkspaceInsight.deleted_at.is_(None)
+    ).first()
+    if existing:
+        existing.payload = payload
+        db.add(existing)
+    else:
+        new_insight = WorkspaceInsight(
+            workspace_id=workspace_id,
+            category="market_research",
+            payload=payload
+        )
+        db.add(new_insight)
+    db.commit()
+    
+    return MarketResearchResponse(**payload)
+
+
+@router.post("/intelligence/competitor-analysis", response_model=CompetitorMatrixResponse)
+async def generate_competitor_analysis(
+    workspace_id: UUID,
+    refresh: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    
+    if not refresh:
+        existing = db.query(WorkspaceInsight).filter(
+            WorkspaceInsight.workspace_id == workspace_id,
+            WorkspaceInsight.category == "competitor_analysis",
+            WorkspaceInsight.deleted_at.is_(None)
+        ).first()
+        if existing:
+            return CompetitorMatrixResponse(**existing.payload)
+
+    from app.models.workspace import Workspace
+    from app.services.executive.ceo import ceo_service
+    
+    ws = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    idea = ws.description if ws and ws.description else f"A product named {ws.name}"
+    
+    competitor_list = ["Competitor A", "Competitor B", "Competitor C"]
+    comp_res = ceo_service.run_competitor_intelligence(idea, competitor_list)
+    
+    payload = {
+        "competitors": comp_res.get("competitor_names", competitor_list),
+        "matrix_markdown": comp_res.get("competitor_matrix_markdown", "Competitor matrix details.")
+    }
+
+    # Persist or update cache
+    existing = db.query(WorkspaceInsight).filter(
+        WorkspaceInsight.workspace_id == workspace_id,
+        WorkspaceInsight.category == "competitor_analysis",
+        WorkspaceInsight.deleted_at.is_(None)
+    ).first()
+    if existing:
+        existing.payload = payload
+        db.add(existing)
+    else:
+        new_insight = WorkspaceInsight(
+            workspace_id=workspace_id,
+            category="competitor_analysis",
+            payload=payload
+        )
+        db.add(new_insight)
+    db.commit()
+    
+    return CompetitorMatrixResponse(**payload)
+
+
+@router.post("/intelligence/cost-estimation", response_model=CostEstimateResponse)
+async def generate_cost_estimation(
+    workspace_id: UUID,
+    refresh: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    
+    if not refresh:
+        existing = db.query(WorkspaceInsight).filter(
+            WorkspaceInsight.workspace_id == workspace_id,
+            WorkspaceInsight.category == "cost_estimation",
+            WorkspaceInsight.deleted_at.is_(None)
+        ).first()
+        if existing:
+            return CostEstimateResponse(**existing.payload)
+
+    from app.models.planning import PlanningItem
+    from app.services.planning.resource_planner import ResourcePlanner
+    from app.services.executive.ceo import ceo_service
+    
+    epics = db.query(PlanningItem).filter(
+        PlanningItem.workspace_id == workspace_id,
+        PlanningItem.type == "Epic",
+        PlanningItem.deleted_at.is_(None)
+    ).all()
+    
+    planner = ResourcePlanner()
+    
+    total_dev = 0
+    total_qa = 0
+    total_des = 0
+    monthly_infra = 0.0
+    monthly_ai = 0.0
+    
+    for epic in epics:
+        try:
+            req = planner.get_epic_resource_plan(db, epic.id)
+            if not req:
+                req = await planner.plan_resources_for_epic(db, workspace_id, epic.id)
+            
+            total_dev += req.developer_count
+            total_qa += req.qa_count
+            total_des += req.designer_count
+            monthly_infra += req.infra_cost_est
+            monthly_ai += req.ai_cost_est
+        except Exception:
+            pass
+            
+    if total_dev == 0:
+        total_dev = 4
+        total_qa = 1
+        total_des = 1
+        monthly_infra = 250.0
+        monthly_ai = 150.0
+        
+    dev_salary = total_dev * 8000.0
+    qa_salary = total_qa * 6000.0
+    des_salary = total_des * 6000.0
+    headcount_cost = dev_salary + qa_salary + des_salary
+    total_burn = headcount_cost + monthly_infra + monthly_ai
+    
+    from app.models.workspace import Workspace
+    ws = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    idea = ws.description if ws and ws.description else f"A product named {ws.name}"
+    forecast_res = ceo_service.run_revenue_forecast(idea, total_burn * 12)
+    
+    payload = {
+        "total_developers": total_dev,
+        "total_qa": total_qa,
+        "total_designers": total_des,
+        "monthly_infra_cost": monthly_infra,
+        "monthly_ai_cost": monthly_ai,
+        "total_monthly_burn": total_burn,
+        "forecast_3yr_markdown": forecast_res.get("forecast_markdown", "Three-year forecast details.")
+    }
+
+    # Persist or update cache
+    existing = db.query(WorkspaceInsight).filter(
+        WorkspaceInsight.workspace_id == workspace_id,
+        WorkspaceInsight.category == "cost_estimation",
+        WorkspaceInsight.deleted_at.is_(None)
+    ).first()
+    if existing:
+        existing.payload = payload
+        db.add(existing)
+    else:
+        new_insight = WorkspaceInsight(
+            workspace_id=workspace_id,
+            category="cost_estimation",
+            payload=payload
+        )
+        db.add(new_insight)
+    db.commit()
+    
+    return CostEstimateResponse(**payload)
+
+
+@router.post("/intelligence/risk-analysis", response_model=RiskAnalysisResponse)
+async def generate_risk_analysis(
+    workspace_id: UUID,
+    refresh: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    _verify_workspace_membership(db, current_user.id, workspace_id)
+    
+    if not refresh:
+        existing = db.query(WorkspaceInsight).filter(
+            WorkspaceInsight.workspace_id == workspace_id,
+            WorkspaceInsight.category == "risk_analysis",
+            WorkspaceInsight.deleted_at.is_(None)
+        ).first()
+        if existing:
+            return RiskAnalysisResponse(**existing.payload)
+
+    from app.models.workspace import Workspace
+    from app.services.ai.llm_manager import LLMManager
+    import json
+    
+    ws = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    idea = ws.description if ws and ws.description else f"A product named {ws.name}"
+    
+    llm = LLMManager()
+    prompt = (
+        "You are an expert Chief Risk Officer and Operations Advisor.\n"
+        f"Perform a comprehensive risk analysis for this business/product idea: '{idea}'.\n"
+        "Identify 4 major risks across: 'Strategic', 'Technical', 'Timeline', and 'Financial' categories.\n"
+        "Define the Severity (High, Medium, Low), detailed Description, and clear Mitigation steps for each risk.\n"
+        "Respond in JSON format only with a list under 'risks' key, each risk having: "
+        "'category', 'severity', 'description', and 'mitigation'."
+    )
+    
+    try:
+        res = await llm.generate(
+            messages=[{"role": "user", "content": prompt}],
+            model="gemini-1.5-pro",
+            provider="gemini"
+        )
+        content = res.strip()
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        data = json.loads(content)
+        risks = data.get("risks", [])
+    except Exception as e:
+        logger.warning(f"Failed to generate risks with LLM, using fallbacks: {e}")
+        risks = [
+            {"category": "Strategic", "severity": "Medium", "description": "Market adoption could be slower than anticipated due to competition.", "mitigation": "Launch early beta programs to secure user feedback."},
+            {"category": "Technical", "severity": "High", "description": "Complex multi-agent orchestration latency could affect user experience.", "mitigation": "Implement smart caching and provider priority routing."},
+            {"category": "Timeline", "severity": "Medium", "description": "Aggressive roadmap deadlines might cause quality regression.", "mitigation": "Adopt automated unit/integration testing gates."},
+            {"category": "Financial", "severity": "Low", "description": "LLM API usage costs could scale faster than premium subscription revenues.", "mitigation": "Implement token usage tracking and quota limits per workspace."}
+        ]
+        
+    risk_objects = [RiskMatrixItem(**r) for r in risks]
+    
+    high_count = sum(1 for r in risks if r.get("severity") == "High")
+    status_str = "Critical Risk" if high_count >= 2 else "Elevated Risk" if high_count == 1 else "Normal Operations"
+    
+    payload = {
+        "overall_status": status_str,
+        "risks": [r.model_dump() for r in risk_objects]
+    }
+
+    # Persist or update cache
+    existing = db.query(WorkspaceInsight).filter(
+        WorkspaceInsight.workspace_id == workspace_id,
+        WorkspaceInsight.category == "risk_analysis",
+        WorkspaceInsight.deleted_at.is_(None)
+    ).first()
+    if existing:
+        existing.payload = payload
+        db.add(existing)
+    else:
+        new_insight = WorkspaceInsight(
+            workspace_id=workspace_id,
+            category="risk_analysis",
+            payload=payload
+        )
+        db.add(new_insight)
+    db.commit()
+    
+    return RiskAnalysisResponse(
+        overall_status=status_str,
+        risks=risk_objects
+    )

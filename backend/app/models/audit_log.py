@@ -12,6 +12,7 @@ class AuditLog(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
     action = Column(String(255), nullable=False)
     ip_address = Column(String(50), nullable=True)

@@ -11,11 +11,13 @@ class Membership(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     workspace_id = Column(
         Uuid,
         ForeignKey("workspaces.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     role = Column(String(50), default="Viewer", nullable=False)
     joined_at = Column(
@@ -25,6 +27,7 @@ class Membership(BaseEntity):
         Uuid,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
+        index=True,
     )
 
     # Relationships - explicitly declare user_id as the primary FK link

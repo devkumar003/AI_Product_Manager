@@ -92,12 +92,16 @@ class DependencyEngine:
                 tgt_id = UUID(dep["target_item_id"])
                 dep_type = dep.get("dependency_type", "Blocker")
 
-                # Verify both exist
+                # Verify both exist and belong to the workspace
                 src_exists = (
-                    db.query(PlanningItem).filter(PlanningItem.id == src_id).first()
+                    db.query(PlanningItem)
+                    .filter(PlanningItem.id == src_id, PlanningItem.workspace_id == workspace_id)
+                    .first()
                 )
                 tgt_exists = (
-                    db.query(PlanningItem).filter(PlanningItem.id == tgt_id).first()
+                    db.query(PlanningItem)
+                    .filter(PlanningItem.id == tgt_id, PlanningItem.workspace_id == workspace_id)
+                    .first()
                 )
 
                 if src_exists and tgt_exists and src_id != tgt_id:

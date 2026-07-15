@@ -1,11 +1,12 @@
 import re
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db
+from app.core.settings import settings
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -131,10 +132,12 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)) -> User:
 
 @router.post("/login", response_model=Token)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
 ) -> Token:
     """
-    Authenticate username/email and password, logging access logs.
+    Authenticate username/email and password, setting HttpOnly cookies.
     """
     # Standard OAuth2 form transmits identifier via 'username'
     user = user_repo.get_by_email(db, email=form_data.username)
@@ -172,17 +175,64 @@ def login(
         action="Successful Login",
     )
 
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+
+    # Set cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+    import secrets
+    csrf_token = secrets.token_hex(32)
+    response.set_cookie(
+        key="XSRF-TOKEN",
+        value=csrf_token,
+        httponly=False,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
     return Token(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=access_token,
+        refresh_token=refresh_token,
     )
 
 
 @router.post("/refresh", response_model=Token)
-def refresh(refresh_token: str, db: Session = Depends(get_db)) -> Token:
+def refresh(
+    response: Response,
+    request: Request,
+    refresh_token: str | None = None,
+    db: Session = Depends(get_db)
+) -> Token:
     """
     Exchange refresh token for a new access/refresh token pair.
+    Supports token from request body/query or cookies.
     """
+    if not refresh_token:
+        refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Refresh token is required",
+        )
+
     try:
         payload = decode_token(refresh_token)
         user_id = payload.get("sub")
@@ -205,17 +255,75 @@ def refresh(refresh_token: str, db: Session = Depends(get_db)) -> Token:
             detail="User account is inactive or disabled",
         )
 
+    new_access_token = create_access_token(user.id)
+    new_refresh_token = create_refresh_token(user.id)
+
+    # Update cookies
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=settings.ENVIRONMENT == "production",
+        samesite="lax",
+        max_age=settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
     return Token(
-        access_token=create_access_token(user.id),
-        refresh_token=create_refresh_token(user.id),
+        access_token=new_access_token,
+        refresh_token=new_refresh_token,
     )
 
 
 @router.post("/logout")
-def logout(db: Session = Depends(get_db)) -> dict:
+async def logout(
+    response: Response,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict:
     """
-    Logs out the user and registers the logout audit trace.
+    Revoke the current access token by blacklisting it in Redis and clearing cookies.
     """
-    # In pure stateless JWT, client deletes token.
-    # Optionally blacklist on Redis. We register audit trace.
+    from app.core.redis import cache_manager
+
+    token = request.cookies.get("access_token")
+    if not token:
+        # Fallback to Authorization Header
+        authorization = request.headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+
+    if token:
+        try:
+            payload = decode_token(token)
+            # Use token's expiry to calculate remaining TTL for blacklist entry
+            exp = payload.get("exp", 0)
+            import time
+            remaining_ttl = max(int(exp - time.time()), 0)
+            if remaining_ttl > 0:
+                # Blacklist using the token's sub + exp as a unique key
+                blacklist_key = f"token_blacklist:{payload.get('sub')}:{exp}"
+                await cache_manager.set(blacklist_key, "revoked", expire_seconds=remaining_ttl)
+        except Exception:
+            pass  # Token is already invalid/expired
+
+    # Clear HttpOnly and CSRF cookies
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    response.delete_cookie("XSRF-TOKEN")
+
+    # Audit log
+    audit_log_repo.log_action(
+        db,
+        user_id=None,
+        action="User Logout",
+    )
+
     return {"message": "Successfully logged out"}

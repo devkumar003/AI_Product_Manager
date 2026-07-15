@@ -170,130 +170,16 @@ class MemoryRecallTool(BaseTool):
         }
 
 
-# ── Future Integration Interfaces ──
-
-
-class WebSearchArgs(BaseModel):
-    query: str = Field(..., description="Web search query")
-
-
-class WebSearchTool(BaseTool):
-    """Interface for future web search integration (Google, Bing, Serper)."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="web_search",
-            description="Search the web for real-time information.",
-            args_schema=WebSearchArgs,
-        )
-
-    async def execute(self, query: str) -> Any:
-        return {
-            "status": "integration_pending",
-            "provider": "serper/google",
-            "query": query,
-        }
-
-
-class GitIntegrationArgs(BaseModel):
-    action: str = Field(..., description="git action: status, log, diff, branch")
-    repo_path: str = Field(default=".", description="Repository path")
-
-
-class GitIntegrationTool(BaseTool):
-    """Interface for future Git integration."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="git_integration",
-            description="Interact with Git repositories.",
-            args_schema=GitIntegrationArgs,
-        )
-
-    async def execute(self, action: str, repo_path: str = ".") -> Any:
-        return {"status": "integration_pending", "action": action}
-
-
-class JiraIntegrationArgs(BaseModel):
-    action: str = Field(
-        ..., description="jira action: create_issue, get_sprint, list_issues"
-    )
-    project_key: str = Field(default="", description="Jira project key")
-
-
-class JiraIntegrationTool(BaseTool):
-    """Interface for future Jira integration."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="jira_integration",
-            description="Manage Jira issues and sprints.",
-            args_schema=JiraIntegrationArgs,
-        )
-
-    async def execute(self, action: str, project_key: str = "") -> Any:
-        return {
-            "status": "integration_pending",
-            "action": action,
-            "project": project_key,
-        }
-
-
-class GitHubIntegrationArgs(BaseModel):
-    action: str = Field(
-        ..., description="github action: create_pr, list_issues, get_repo"
-    )
-    repo: str = Field(default="", description="owner/repo")
-
-
-class GitHubIntegrationTool(BaseTool):
-    """Interface for future GitHub integration."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="github_integration",
-            description="Interact with GitHub repositories.",
-            args_schema=GitHubIntegrationArgs,
-        )
-
-    async def execute(self, action: str, repo: str = "") -> Any:
-        return {"status": "integration_pending", "action": action, "repo": repo}
-
-
-class SlackIntegrationArgs(BaseModel):
-    action: str = Field(..., description="slack action: send_message, list_channels")
-    channel: str = Field(default="", description="Slack channel")
-
-
-class SlackIntegrationTool(BaseTool):
-    """Interface for future Slack integration."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            name="slack_integration",
-            description="Send messages and manage Slack channels.",
-            args_schema=SlackIntegrationArgs,
-        )
-
-    async def execute(self, action: str, channel: str = "") -> Any:
-        return {"status": "integration_pending", "action": action, "channel": channel}
-
-
 # ── Registry Builder ──
 
 
 def build_tool_registry(knowledge_base: Any = None) -> ToolRegistry:
-    """Build and return a fully populated ToolRegistry with all available tools."""
+    """Build and return a fully populated ToolRegistry with all implemented tools."""
     registry = ToolRegistry()
     registry.register(CalculatorTool())
     registry.register(MarkdownTool())
     registry.register(ExportTool())
     registry.register(KnowledgeSearchTool(knowledge_base))
     registry.register(MemoryRecallTool())
-    registry.register(WebSearchTool())
-    registry.register(GitIntegrationTool())
-    registry.register(JiraIntegrationTool())
-    registry.register(GitHubIntegrationTool())
-    registry.register(SlackIntegrationTool())
     logger.info(f"Tool registry initialized with {len(registry.list_tools())} tools")
     return registry

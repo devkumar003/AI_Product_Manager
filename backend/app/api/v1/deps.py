@@ -19,7 +19,13 @@ from app.repositories.organization import org_repo
 from app.repositories.user import user_repo
 from app.schemas.token import TokenPayload
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
+from fastapi import Depends, HTTPException, Path, status, Request
+from fastapi.security import OAuth2PasswordBearer
+
+reusable_oauth2 = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login",
+    auto_error=False
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -30,9 +36,23 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def get_current_user(
-    db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
+async def get_current_user(
+    request: Request,
+    db: Session = Depends(get_db),
+    token: str | None = Depends(reusable_oauth2)
 ) -> User:
+    auth_from_cookie = False
+    if not token:
+        token = request.cookies.get("access_token")
+        auth_from_cookie = True
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[ALGORITHM])
         token_data = TokenPayload(**payload)
@@ -43,9 +63,31 @@ def get_current_user(
             )
     except (jwt.JWTError, ValidationError) as err:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         ) from err
+
+    # Check blacklist in Redis
+    from app.core.redis import cache_manager
+    blacklist_key = f"token_blacklist:{token_data.sub}:{payload.get('exp')}"
+    if await cache_manager.get(blacklist_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # CSRF Check if cookie authentication is used and request is modifying state
+    if auth_from_cookie and request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        cookie_csrf = request.cookies.get("XSRF-TOKEN")
+        header_csrf = request.headers.get("x-xsrf-token") or request.headers.get("X-XSRF-TOKEN")
+        if not cookie_csrf or not header_csrf or cookie_csrf != header_csrf:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="CSRF token validation failed",
+            )
+
     user = user_repo.get(db, id=UUID(token_data.sub))
     if not user:
         raise HTTPException(

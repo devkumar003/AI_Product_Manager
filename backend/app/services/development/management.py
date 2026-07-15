@@ -9,8 +9,8 @@ from app.models.development import (
     ReleasePlan,
     SprintUpdate,
 )
-from app.services.ai.agents.base import AgentConfig
-from app.services.ai.llm_manager import llm_manager
+from app.utils.llm_wrapper import AgentConfig
+from app.utils.llm_wrapper import llm_manager
 
 logger = logging.getLogger("app.services.development.management")
 
@@ -89,6 +89,15 @@ class DevelopmentManagement:
         logger.info(
             f"Creating Deployment Plan for release: {release_id} in {environment}"
         )
+
+        # Validate release_id belongs to workspace_id
+        release = (
+            db.query(ReleasePlan)
+            .filter(ReleasePlan.id == release_id, ReleasePlan.workspace_id == workspace_id)
+            .first()
+        )
+        if not release:
+            raise ValueError("Release plan not found in this workspace")
 
         # Generate docker compose / kubernetes stubs
         manifests = {
