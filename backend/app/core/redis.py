@@ -21,9 +21,10 @@ class CacheManager:
             
         self._last_connect_attempt = now
         try:
-            if getattr(settings, "REDIS_URL", None):
+            redis_url = getattr(settings, "REDIS_URL", None)
+            if redis_url and any(redis_url.startswith(scheme) for scheme in ("redis://", "rediss://", "unix://")):
                 self.client = redis.Redis.from_url(
-                    settings.REDIS_URL,
+                    redis_url,
                     socket_connect_timeout=0.5,
                     socket_timeout=0.5,
                     decode_responses=True,

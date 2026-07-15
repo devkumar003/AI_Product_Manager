@@ -87,7 +87,8 @@ def get_storage_driver() -> BaseStorage:
     if driver_type == "s3":
         return S3Storage()
     # Default is LocalStorage
-    return LocalStorage()
+    upload_dir = os.getenv("UPLOAD_DIR", "uploads")
+    return LocalStorage(upload_dir=upload_dir)
 
 
 storage_service = get_storage_driver()

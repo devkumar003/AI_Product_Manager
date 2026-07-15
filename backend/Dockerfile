@@ -26,7 +26,10 @@ COPY --chown=appuser:appgroup alembic.ini ./
 COPY --chown=appuser:appgroup .env* ./
 COPY --chown=appuser:appgroup docker-entrypoint.sh ./
 
-RUN chmod +x /app/docker-entrypoint.sh && chown appuser:appgroup /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh && \
+    chown appuser:appgroup /app/docker-entrypoint.sh && \
+    mkdir -p /app/uploads && \
+    chown -R appuser:appgroup /app/uploads
 
 # Switch to non-root user
 USER appuser
