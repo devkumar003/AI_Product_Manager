@@ -64,32 +64,57 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        # Auto-stamp logic for pre-existing production databases
+        # Auto-stamp/fast-forward logic for pre-existing production databases
         try:
             from sqlalchemy import inspect, text
             inspector = inspect(connection)
             tables = inspector.get_table_names()
             
-            if "integration_plugins" in tables and "ai_workflow_executions" not in tables:
-                has_version = False
+            # Determine version corresponding to existing tables
+            detected_version = None
+            if "ai_workflow_executions" in tables:
+                detected_version = "e7b4628d53ca"
+            elif "integration_plugins" in tables:
+                detected_version = "9a61dadb18c7"
+            elif "projects" in tables:
+                detected_version = "f8f213eee413"
+                
+            if detected_version:
+                VERSION_ORDER = ["f8f213eee413", "6fd5aed629a7", "93b22cf9bc42", "9a61dadb18c7", "e7b4628d53ca"]
+                
+                # Fetch current recorded version
+                current_version = None
                 if "alembic_version" in tables:
                     try:
                         res = connection.execute(text("SELECT version_num FROM alembic_version")).fetchone()
                         if res:
-                            has_version = True
+                            current_version = res[0]
                     except Exception:
                         pass
                 
-                if not has_version:
+                # Determine if we should fast-forward/stamp
+                should_stamp = False
+                if not current_version:
+                    should_stamp = True
+                else:
+                    try:
+                        current_idx = VERSION_ORDER.index(current_version)
+                        detected_idx = VERSION_ORDER.index(detected_version)
+                        if current_idx < detected_idx:
+                            should_stamp = True
+                    except ValueError:
+                        should_stamp = True
+                
+                if should_stamp:
                     if "alembic_version" not in tables:
                         connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, PRIMARY KEY (version_num))"))
                     connection.execute(text("DELETE FROM alembic_version"))
-                    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('9a61dadb18c7')"))
+                    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES (:version)"), {"version": detected_version})
                     try:
                         connection.commit()
                     except Exception:
                         pass
-                    print("Auto-healed database: Stamped Alembic version to 9a61dadb18c7")
+                    print(f"Auto-healed database: Fast-forwarded Alembic version to {detected_version}")
         except Exception as e:
             print(f"Alembic auto-stamping warning: {e}")
 
