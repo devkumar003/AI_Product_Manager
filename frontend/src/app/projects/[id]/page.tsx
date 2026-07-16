@@ -113,6 +113,9 @@ export default function ProjectDashboardPage() {
     const status = data.project.generation_status;
     if (!status || status === 'completed') return;
 
+    const projectId = data.project.id;
+    const workflowId = data.project.workflow_id;
+
     let active = true;
     const controller = new AbortController();
 
@@ -120,7 +123,7 @@ export default function ProjectDashboardPage() {
       try {
         const token = localStorage.getItem('token') || '';
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/orchestrator/stream/${data.project.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/orchestrator/stream/${projectId}`,
           {
             signal: controller.signal,
             headers: {
@@ -163,8 +166,8 @@ export default function ProjectDashboardPage() {
                   };
                 });
                 
-                if (data.project.workflow_id) {
-                  fetchWorkflowDetails(data.project.workflow_id);
+                if (workflowId) {
+                  fetchWorkflowDetails(workflowId);
                 }
 
                 // If completed, refresh the whole dashboard to show new documents
@@ -183,8 +186,8 @@ export default function ProjectDashboardPage() {
           const interval = setInterval(() => {
             if (active) {
               fetchDashboard();
-              if (data?.project?.workflow_id) {
-                fetchWorkflowDetails(data.project.workflow_id);
+              if (workflowId) {
+                fetchWorkflowDetails(workflowId);
               }
             }
           }, 4000);
