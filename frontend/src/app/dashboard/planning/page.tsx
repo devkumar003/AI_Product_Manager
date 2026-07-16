@@ -139,7 +139,7 @@ interface TemplateDefinition {
 export default function PlanningDashboard() {
   const { activeWorkspace } = useAuth();
 
-  const [activeTab, setActiveTab] = React.useState<'goals' | 'backlog' | 'kanban' | 'dependencies' | 'simulations' | 'compressor'>('goals');
+  const [activeTab, setActiveTab] = React.useState<'goals' | 'backlog' | 'kanban' | 'dependencies' | 'simulations' | 'compressor' | 'resources' | 'analytics'>('goals');
 
   // Loading States
   const [isGoalsLoading, setIsGoalsLoading] = React.useState(false);
@@ -152,6 +152,7 @@ export default function PlanningDashboard() {
   const [dependencies, setDependencies] = React.useState<Dependency[]>([]);
   const [simulations, setSimulations] = React.useState<Simulation[]>([]);
   const [analytics, setAnalytics] = React.useState<Analytics | null>(null);
+  const [costData, setCostData] = React.useState<any | null>(null);
   const [templates, setTemplates] = React.useState<Record<string, TemplateDefinition>>({});
   const [expandedItem, setExpandedItem] = React.useState<string | null>(null);
   const [generatingId, setGeneratingId] = React.useState<string | null>(null);
@@ -259,6 +260,10 @@ export default function PlanningDashboard() {
       // 7. Fetch Templates
       const fetchedTemplates = await apiService.get<Record<string, TemplateDefinition>>('/planning/intelligence/templates');
       setTemplates(fetchedTemplates);
+
+      // 8. Fetch Cost Estimation
+      const fetchedCosts = await apiService.post<any>(`/planning/intelligence/cost-estimation?workspace_id=${activeWorkspace.id}`).catch(() => null);
+      if (fetchedCosts) setCostData(fetchedCosts);
     } catch (err) {
       console.warn('Failed to load workspace planning telemetry:', err);
     } finally {
@@ -503,7 +508,7 @@ export default function PlanningDashboard() {
 
         {/* Tab Controls */}
         <div className="flex space-x-1 border-b border-zinc-900 pb-px">
-          {(['goals', 'backlog', 'kanban', 'dependencies', 'simulations', 'compressor'] as const).map((tab) => (
+          {(['goals', 'backlog', 'kanban', 'dependencies', 'simulations', 'compressor', 'resources', 'analytics'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -513,7 +518,7 @@ export default function PlanningDashboard() {
                   : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              {tab}
+              {tab === 'resources' ? 'Resource Plan' : tab === 'analytics' ? 'Sprint Analytics' : tab}
             </button>
           ))}
         </div>
@@ -1227,6 +1232,128 @@ export default function PlanningDashboard() {
                 <div className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl min-h-[220px] text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed">
                   {compressedResult || 'No compressed output yet. Click compress on the left panel.'}
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 6: Resource Planning */}
+        {activeTab === 'resources' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-200">
+            {costData ? (
+              <>
+                <Card className="bg-zinc-950/20 border border-zinc-900">
+                  <CardHeader>
+                    <CardTitle className="text-lg">FTE Headcount Allocation</CardTitle>
+                    <CardDescription>Decomposed staff requirements for the active workspace</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-xs">
+                    <div className="flex justify-between items-center p-3 bg-zinc-900/40 border border-zinc-850 rounded-lg">
+                      <span className="font-medium text-zinc-300">Software Developers</span>
+                      <span className="font-bold text-indigo-400">{costData.total_developers} FTE</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-zinc-900/40 border border-zinc-850 rounded-lg">
+                      <span className="font-medium text-zinc-300">UI/UX Designers</span>
+                      <span className="font-bold text-emerald-400">{costData.total_designers} FTE</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-zinc-900/40 border border-zinc-850 rounded-lg">
+                      <span className="font-medium text-zinc-300">QA Engineers</span>
+                      <span className="font-bold text-amber-400">{costData.total_qa} FTE</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-950/20 border border-zinc-900 lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Operational Budget & Run Rate</CardTitle>
+                    <CardDescription>Monthly capital estimations and long range projections</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6 text-xs">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-3 bg-zinc-950 border border-zinc-900 rounded-lg">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Monthly Infra</span>
+                        <div className="text-base font-black text-white mt-1">${costData.monthly_infra_cost.toLocaleString()}</div>
+                      </div>
+                      <div className="p-3 bg-zinc-950 border border-zinc-900 rounded-lg">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Monthly AI API</span>
+                        <div className="text-base font-black text-indigo-400 mt-1">${costData.monthly_ai_cost.toLocaleString()}</div>
+                      </div>
+                      <div className="p-3 bg-zinc-950 border border-zinc-900 rounded-lg">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase">Total Monthly Burn</span>
+                        <div className="text-base font-black text-rose-450 mt-1">${costData.total_monthly_burn.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-zinc-950 border border-zinc-900 rounded-lg">
+                      <span className="text-[10px] font-bold text-zinc-400 block mb-2 uppercase">Long Range Growth Projections</span>
+                      <div className="text-[11px] text-zinc-300 whitespace-pre-wrap font-mono leading-relaxed max-h-[200px] overflow-y-auto">
+                        {costData.forecast_3yr_markdown}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="lg:col-span-3 text-center py-20 text-xs text-zinc-500 border border-dashed border-zinc-900 rounded-xl">
+                No resource metadata found. Reload or generate telemetry from the header button.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 7: Analytics */}
+        {activeTab === 'analytics' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
+            <Card className="bg-zinc-950/20 border border-zinc-900">
+              <CardHeader>
+                <CardTitle className="text-lg">Velocity & Planning Metrics</CardTitle>
+                <CardDescription>Accuracy and efficiency statistics computed over active sprint items</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 text-xs">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-zinc-350">
+                    <span>Task Planning Accuracy</span>
+                    <span className="font-bold text-white">{analytics?.accuracy_rate ? `${analytics.accuracy_rate}%` : '100%'}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-500" style={{ width: `${analytics?.accuracy_rate || 100}%` }} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-zinc-350">
+                    <span>Active Completion Rate</span>
+                    <span className="font-bold text-emerald-400">{analytics?.completion_rate ? `${analytics.completion_rate.toFixed(1)}%` : '0%'}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500" style={{ width: `${analytics?.completion_rate || 0}%` }} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-zinc-350">
+                    <span>Sprint Execution Efficiency</span>
+                    <span className="font-bold text-amber-400">{analytics?.execution_efficiency ? `${analytics.execution_efficiency.toFixed(1)}%` : '0%'}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-amber-500" style={{ width: `${analytics?.execution_efficiency || 0}%` }} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-zinc-950/20 border border-zinc-900">
+              <CardHeader>
+                <CardTitle className="text-lg">Delay & Delay Severity</CardTitle>
+                <CardDescription>Telemetry monitoring overdue tickets and active bottleneck blockades</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col justify-center items-center py-10 space-y-4">
+                <div className="text-5xl font-black text-rose-500">
+                  {analytics?.total_delays_hours ? `${analytics.total_delays_hours}h` : '0 hrs'}
+                </div>
+                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Accumulated Project Delay</div>
+                <p className="text-[11px] text-zinc-500 text-center max-w-xs">
+                  This represents the time sum of overdue sprint tasks relative to target milestone estimates.
+                </p>
               </CardContent>
             </Card>
           </div>

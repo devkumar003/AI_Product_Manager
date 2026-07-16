@@ -313,3 +313,160 @@ def delete_document(
         description=f"Soft deleted document '{doc.name}'.",
     )
     return soft_deleted
+
+
+@router.get("/{workspace_id}/{document_id}/content")
+def get_document_content(
+    workspace_id: UUID,
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
+):
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
+    if not doc or doc.workspace_id != workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    try:
+        file_bytes = storage_service.read(doc.filename)
+        return {"content": file_bytes.decode("utf-8", errors="ignore")}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read document content: {str(e)}",
+        )
+
+
+from pydantic import BaseModel
+class DocumentContentUpdate(BaseModel):
+    content: str
+    is_draft: bool = False
+
+
+@router.put("/{workspace_id}/{document_id}/content", response_model=DocumentResponse)
+def update_document_content(
+    workspace_id: UUID,
+    document_id: UUID,
+    content_in: DocumentContentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_WRITE)
+    ),
+) -> Document:
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
+    if not doc or doc.workspace_id != workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    
+    content_bytes = content_in.content.encode("utf-8")
+    
+    if content_in.is_draft:
+        # Overwrite current active file content to save version noise
+        try:
+            # Save using the exact same filename
+            storage_service.save(content_bytes, doc.filename)
+            # Update file_size and checksum
+            import hashlib
+            doc.file_size = len(content_bytes)
+            doc.checksum = hashlib.md5(content_bytes).hexdigest()
+            doc.updated_by = current_user.id
+            db.add(doc)
+            db.commit()
+            db.refresh(doc)
+            
+            # Log activity timeline
+            activity_repo.log(
+                db,
+                user_id=current_user.id,
+                workspace_id=workspace_id,
+                action="document_draft_saved",
+                entity_type="document",
+                entity_id=doc.id,
+                description=f"Auto-saved draft of '{doc.name}'.",
+            )
+            return doc
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to save draft: {str(e)}",
+            )
+    else:
+        # Create a new official version
+        try:
+            updated = document_repo.add_version(
+                db, db_obj=doc, file_bytes=content_bytes, created_by_id=current_user.id
+            )
+            
+            activity_repo.log(
+                db,
+                user_id=current_user.id,
+                workspace_id=workspace_id,
+                action="document_version_added",
+                entity_type="document",
+                entity_id=doc.id,
+                description=f"Published version {updated.current_version_number} of '{doc.name}'.",
+            )
+            return updated
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create new version: {str(e)}",
+            )
+
+
+from app.schemas.document import DocumentVersionResponse
+@router.get("/{workspace_id}/{document_id}/versions", response_model=list[DocumentVersionResponse])
+def get_document_versions(
+    workspace_id: UUID,
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
+):
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
+    if not doc or doc.workspace_id != workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    return doc.versions_list
+
+
+@router.get("/{workspace_id}/{document_id}/version/{version_number}/content")
+def get_document_version_content(
+    workspace_id: UUID,
+    document_id: UUID,
+    version_number: int,
+    db: Session = Depends(get_db),
+    membership: Membership = Depends(
+        require_workspace_permission(Permission.WORKSPACE_READ)
+    ),
+):
+    doc = document_repo.get(db, document_id, workspace_id=workspace_id)
+    if not doc or doc.workspace_id != workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        )
+    # Find the version
+    ver = next((v for v in doc.versions_list if v.version_number == version_number), None)
+    if not ver:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Version {version_number} not found",
+        )
+    try:
+        file_bytes = storage_service.read(ver.filename)
+        return {"content": file_bytes.decode("utf-8", errors="ignore")}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to read version content: {str(e)}",
+        )

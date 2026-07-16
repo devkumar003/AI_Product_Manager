@@ -23,6 +23,7 @@ class DocumentRepository(BaseRepository[Document]):
         category: str,
         tags: list[str],
         status: str = "Draft",
+        is_editable: bool = False,
         created_by_id: uuid.UUID | None = None,
     ) -> Document:
         # 1. Compute MD5 checksum
@@ -48,6 +49,7 @@ class DocumentRepository(BaseRepository[Document]):
             status=status,
             current_version_number=1,
             archived=False,
+            is_editable=is_editable,
             created_by=created_by_id,
         )
         db.add(db_doc)

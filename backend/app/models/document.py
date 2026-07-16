@@ -29,6 +29,7 @@ class Document(BaseEntity):
     status = Column(String(50), default="Draft", nullable=False)
     current_version_number = Column(Integer, default=1, nullable=False)
     archived = Column(Boolean, default=False, nullable=False)
+    is_editable = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     project = relationship("Project", back_populates="documents")

@@ -23,6 +23,7 @@ class DocumentBase(BaseModel):
     category: str = Field("General", max_length=100)
     tags: list[str] = Field(default_factory=list)
     status: str = Field("Draft", max_length=50)
+    is_editable: bool = Field(False)
 
 
 class DocumentCreate(BaseModel):
@@ -31,6 +32,7 @@ class DocumentCreate(BaseModel):
     category: str = Field("General", max_length=100)
     tags: list[str] = Field(default_factory=list)
     status: str = Field("Draft", max_length=50)
+    is_editable: bool = False
 
 
 class DocumentUpdate(BaseModel):
@@ -40,6 +42,7 @@ class DocumentUpdate(BaseModel):
     tags: list[str] | None = None
     status: str | None = Field(None, max_length=50)
     archived: bool | None = None
+    is_editable: bool | None = None
 
 
 class DocumentResponse(DocumentBase):

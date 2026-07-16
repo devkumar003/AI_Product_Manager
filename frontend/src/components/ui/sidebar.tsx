@@ -76,37 +76,38 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     {
       title: 'Product Discovery',
       items: [
-        { name: 'Idea Analyzer', href: '/dashboard/idea-analyzer', icon: Lightbulb },
-        { name: 'Market Research', href: '/dashboard/intelligence?tab=market', icon: TrendingUp },
-        { name: 'Competitor Analysis', href: '/dashboard/intelligence?tab=competitors', icon: Shield },
+        { name: 'Guided Discovery', href: '/dashboard/discovery', icon: Sparkles },
+        { name: 'Idea Analyzer', href: '/dashboard/discovery?tab=idea', icon: Lightbulb },
+        { name: 'Market Research', href: '/dashboard/discovery?tab=market', icon: TrendingUp },
+        { name: 'Competitor Analysis', href: '/dashboard/discovery?tab=competitors', icon: Shield },
       ],
     },
     {
-      title: 'Requirements',
+      title: 'Requirements Suite',
       items: [
-        { name: 'PRD Generator', href: '/dashboard/prd-generator', icon: FileText },
-        { name: 'Requirements', href: '/dashboard/requirement-generator', icon: ClipboardList },
-        { name: 'Acceptance Criteria', href: '/dashboard/acceptance-criteria', icon: CheckSquare },
-        { name: 'Wireframes', href: '/dashboard/wireframe-suggestions', icon: Monitor },
+        { name: 'Requirements Studio', href: '/dashboard/requirements', icon: FileText },
+        { name: 'PRD Studio', href: '/dashboard/requirements?tab=prd', icon: ClipboardList },
+        { name: 'Requirements Catalog', href: '/dashboard/requirements?tab=catalog', icon: CheckSquare },
+        { name: 'Backlog Stories', href: '/dashboard/requirements?tab=stories', icon: Monitor },
       ],
     },
     {
       title: 'Planning & Roadmap',
       items: [
         { name: 'Planning', href: '/dashboard/planning', icon: Calendar },
-        { name: 'Roadmap', href: '/dashboard/roadmap-generator', icon: Map },
-        { name: 'Cost Estimation', href: '/dashboard/intelligence?tab=costs', icon: DollarSign },
-        { name: 'Risk Analysis', href: '/dashboard/intelligence?tab=risks', icon: AlertTriangle },
+        { name: 'Roadmap', href: '/dashboard/roadmap', icon: Map },
+        { name: 'Cost Estimation', href: '/dashboard/roadmap?tab=costs', icon: DollarSign },
+        { name: 'Risk Analysis', href: '/dashboard/roadmap?tab=risks', icon: AlertTriangle },
       ],
     },
     {
       title: 'Engineering',
       items: [
-        { name: 'Architecture', href: '/dashboard/architecture-generator', icon: Cpu },
-        { name: 'Tech Stack', href: '/dashboard/tech-stack', icon: Code2 },
+        { name: 'Architecture', href: '/dashboard/engineering?tab=architecture', icon: Cpu },
+        { name: 'Tech Stack', href: '/dashboard/engineering?tab=techstack', icon: Code2 },
         { name: 'Development', href: '/dashboard/development', icon: Code2 },
-        { name: 'Testing Strategy', href: '/dashboard/testing-strategy', icon: TestTube },
-        { name: 'Deployment Guide', href: '/dashboard/deployment-guide', icon: Rocket },
+        { name: 'Testing Strategy', href: '/dashboard/engineering?tab=testing', icon: TestTube },
+        { name: 'Deployment Guide', href: '/dashboard/engineering?tab=deployment', icon: Rocket },
       ],
     },
     {
@@ -115,7 +116,7 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
         { name: 'Analytics', href: '/dashboard/analytics', icon: Activity },
         { name: 'AI Agents', href: '/dashboard/agents', icon: Cpu },
         { name: 'Integrations', href: '/dashboard/integrations', icon: Plug },
-        { name: 'Executive', href: '/dashboard/executive', icon: Building2 },
+        { name: 'Executive Reports', href: '/dashboard/reports', icon: Building2 },
       ],
     },
     {
@@ -138,8 +139,9 @@ export const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   };
 
   const isItemActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
-    return pathname.startsWith(href);
+    const pathOnly = href.split('?')[0];
+    if (pathOnly === '/dashboard') return pathname === '/dashboard';
+    return pathname.startsWith(pathOnly);
   };
 
   return (
