@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -22,7 +22,7 @@ class AIScheduler:
         Schedules all Todo/In Progress tasks for a workspace.
         Resolves the dependency graph and assigns start/end times.
         """
-        start_time = base_start_date or datetime.utcnow()
+        start_time = base_start_date or datetime.now(timezone.utc)
 
         # 1. Fetch all items (specifically Tasks and Stories)
         tasks = (

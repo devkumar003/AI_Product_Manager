@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -19,7 +19,7 @@ class ExecutionQueue:
     def enqueue_task(
         self, db: Session, workspace_id: UUID, task_in: ExecutionQueueItemCreate
     ) -> ExecutionQueueItem:
-        scheduled_at = task_in.scheduled_at or datetime.utcnow()
+        scheduled_at = task_in.scheduled_at or datetime.now(timezone.utc)
         item = ExecutionQueueItem(
             workspace_id=workspace_id,
             task_name=task_in.task_name,
@@ -39,7 +39,7 @@ class ExecutionQueue:
         """
         Retrieves items that are due or overdue, sorted by priority (highest first) and scheduled date.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return (
             db.query(ExecutionQueueItem)
             .filter(
@@ -62,7 +62,7 @@ class ExecutionQueue:
         if not item:
             return False
         item.status = "Running"
-        item.run_at = datetime.utcnow()
+        item.run_at = datetime.now(timezone.utc)
         db.add(item)
         db.commit()
         return True
@@ -98,7 +98,7 @@ class ExecutionQueue:
         else:
             # Backoff for retry: delay execution by 5 minutes * retry_count
             item.status = "Delayed"
-            item.scheduled_at = datetime.utcnow() + timedelta(
+            item.scheduled_at = datetime.now(timezone.utc) + timedelta(
                 minutes=5 * item.retry_count
             )
             logger.warning(

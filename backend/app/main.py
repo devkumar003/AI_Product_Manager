@@ -67,14 +67,13 @@ from app.middleware.security import (
 
 # CORS configuration
 if settings.BACKEND_CORS_ORIGINS:
-    allow_all = "*" in settings.BACKEND_CORS_ORIGINS
-    # SECURITY: Browsers reject credentials with wildcard origins.
-    # In production, never use wildcard — always list explicit origins.
+    # Filter out wildcard to ensure we can allow credentials with explicit origins
+    origins = [origin for origin in settings.BACKEND_CORS_ORIGINS if origin != "*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if allow_all else settings.BACKEND_CORS_ORIGINS,
-        allow_origin_regex=r"https://.*\.vercel\.app" if not allow_all else None,
-        allow_credentials=not allow_all,  # credentials require explicit origins
+        allow_origins=origins,
+        allow_origin_regex=r"https://.*\.vercel\.app",
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )

@@ -71,7 +71,8 @@ async def workspace_collaboration_ws(websocket: WebSocket, workspace_id: str):
                 },
             )
     except WebSocketDisconnect:
-        manager.disconnect(workspace_id, websocket)
+        pass
     except Exception as e:
         logger.error(f"WebSocket error in workspace {workspace_id}: {e}")
+    finally:
         manager.disconnect(workspace_id, websocket)

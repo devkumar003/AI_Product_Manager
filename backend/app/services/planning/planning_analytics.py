@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -36,7 +36,7 @@ class PlanningAnalyticsService:
                 completion_rate=0.0,
                 execution_efficiency=0.0,
                 total_delays_hours=0.0,
-                measured_at=datetime.utcnow(),
+                measured_at=datetime.now(timezone.utc),
             )
             db.add(analytics)
             db.commit()
@@ -67,7 +67,7 @@ class PlanningAnalyticsService:
         # 4. Total Delays (in hours)
         # Check if tasks exceeded their scheduled_end time
         total_delays_hours = 0.0
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for it in items:
             if it.status != "Done" and it.metadata_fields:
                 sched_end_str = it.metadata_fields.get("scheduled_end")
@@ -87,7 +87,7 @@ class PlanningAnalyticsService:
             completion_rate=completion_rate,
             execution_efficiency=execution_efficiency,
             total_delays_hours=round(total_delays_hours, 2),
-            measured_at=datetime.utcnow(),
+            measured_at=datetime.now(timezone.utc),
         )
 
         db.add(analytics)

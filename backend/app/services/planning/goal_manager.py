@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -57,7 +57,7 @@ class GoalManager:
         for field, value in update_data.items():
             setattr(goal, field, value)
 
-        goal.updated_at = datetime.utcnow()
+        goal.updated_at = datetime.now(timezone.utc)
         db.add(goal)
         db.commit()
         db.refresh(goal)
@@ -67,7 +67,7 @@ class GoalManager:
         goal = self.get_goal(db, goal_id, workspace_id)
         if not goal:
             return False
-        goal.deleted_at = datetime.utcnow()
+        goal.deleted_at = datetime.now(timezone.utc)
         db.add(goal)
         db.commit()
         return True
@@ -97,7 +97,7 @@ class GoalManager:
         elif progress > 0.0 and goal.status == "Open":
             goal.status = "In Progress"
 
-        goal.updated_at = datetime.utcnow()
+        goal.updated_at = datetime.now(timezone.utc)
         db.add(goal)
         db.commit()
         db.refresh(goal)

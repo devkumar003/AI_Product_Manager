@@ -1,6 +1,6 @@
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -56,7 +56,7 @@ class GitWorkflow:
         # Calculate mock hash
         sha = hashlib.sha1()
         sha.update(
-            f"{branch_id}-{commit_message}-{datetime.utcnow().isoformat()}".encode()
+            f"{branch_id}-{commit_message}-{datetime.now(timezone.utc).isoformat()}".encode()
         )
         commit_hash = sha.hexdigest()
 

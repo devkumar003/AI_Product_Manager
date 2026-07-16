@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -162,7 +162,7 @@ class QualityEngine:
             title=f"Bug detected in {file_path.split('/')[-1]}",
             description="Automated bug scanning found possible errors in implementation.",
             severity="Medium",
-            detected_at=datetime.utcnow(),
+            detected_at=datetime.now(timezone.utc),
             suggested_fix=res.content,
             status="Open",
         )
