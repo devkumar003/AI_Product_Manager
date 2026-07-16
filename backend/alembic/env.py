@@ -64,6 +64,35 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Auto-stamp logic for pre-existing production databases
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(connection)
+            tables = inspector.get_table_names()
+            
+            if "integration_plugins" in tables and "ai_workflow_executions" not in tables:
+                has_version = False
+                if "alembic_version" in tables:
+                    try:
+                        res = connection.execute(text("SELECT version_num FROM alembic_version")).fetchone()
+                        if res:
+                            has_version = True
+                    except Exception:
+                        pass
+                
+                if not has_version:
+                    if "alembic_version" not in tables:
+                        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL, PRIMARY KEY (version_num))"))
+                    connection.execute(text("DELETE FROM alembic_version"))
+                    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('9a61dadb18c7')"))
+                    try:
+                        connection.commit()
+                    except Exception:
+                        pass
+                    print("Auto-healed database: Stamped Alembic version to 9a61dadb18c7")
+        except Exception as e:
+            print(f"Alembic auto-stamping warning: {e}")
+
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
