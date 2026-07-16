@@ -86,6 +86,7 @@ async def create_project(
             description=db_obj.description or ""
         )
     except Exception as e:
+        db.rollback()
         logger.warning(f"Failed to auto-trigger AI Orchestrator on project creation: {e}")
 
     return db_obj

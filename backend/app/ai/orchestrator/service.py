@@ -120,6 +120,7 @@ class AIOrchestrationService:
             require_human_review=False
         )
         db.add(execution)
+        db.flush()  # Force insert of AIWorkflowExecution first to prevent ForeignKeyViolation on Project update
 
         # Update Project state
         project = db.query(Project).filter(Project.id == project_id).first()
