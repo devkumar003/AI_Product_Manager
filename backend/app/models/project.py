@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, String, Uuid
+from sqlalchemy import Boolean, Column, ForeignKey, Float, String, Uuid
 from sqlalchemy.orm import relationship
 
 from app.models.base import BaseEntity
@@ -28,9 +28,19 @@ class Project(BaseEntity):
     )
     archived = Column(Boolean, default=False, nullable=False)
 
+    # Autonomous Orchestration Status fields
+    generation_status = Column(String(50), nullable=True)
+    generation_progress = Column(Float, default=0.0, nullable=False)
+    workflow_id = Column(
+        Uuid,
+        nullable=True,
+        index=True,
+    )
+
     # Relationships
     workspace = relationship("Workspace")
     owner = relationship("User")
     documents = relationship(
         "Document", back_populates="project", cascade="all, delete-orphan"
     )
+

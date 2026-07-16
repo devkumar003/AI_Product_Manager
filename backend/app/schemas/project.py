@@ -13,6 +13,9 @@ class ProjectBase(BaseModel):
     status: str = Field("Planning", max_length=50)
     priority: str = Field("Medium", max_length=50)
     owner_id: UUID | None = None
+    generation_status: str | None = None
+    generation_progress: float | None = None
+    workflow_id: UUID | None = None
 
 
 class ProjectCreate(BaseModel):

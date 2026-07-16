@@ -20,12 +20,16 @@ from app.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 router = APIRouter()
 
 
+import logging
+logger = logging.getLogger("app.api.v1.endpoints.projects")
+
+
 @router.post(
     "/{workspace_id}",
     response_model=ProjectResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_project(
+async def create_project(
     workspace_id: UUID,
     project_in: ProjectCreate,
     db: Session = Depends(get_db),
@@ -70,6 +74,19 @@ def create_project(
         entity_id=db_obj.id,
         description=f"Created project '{db_obj.name}' in workspace.",
     )
+
+    # 3. Auto-trigger Master AI Orchestrator
+    try:
+        from app.ai.orchestrator.service import orchestration_service
+        await orchestration_service.trigger_workflow(
+            db=db,
+            project_id=db_obj.id,
+            workspace_id=workspace_id,
+            name=db_obj.name,
+            description=db_obj.description or ""
+        )
+    except Exception as e:
+        logger.warning(f"Failed to auto-trigger AI Orchestrator on project creation: {e}")
 
     return db_obj
 

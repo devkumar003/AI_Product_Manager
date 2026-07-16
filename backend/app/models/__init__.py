@@ -49,6 +49,7 @@ from app.models.workspace import Workspace
 from app.models.insight import WorkspaceInsight
 from app.models.chat import ChatMessage
 from app.models.simulated_integration import SimulatedIntegrationAsset
+from app.models.orchestrator import AIWorkflowExecution, AIWorkflowStep
 
 __all__ = [
     "Base",
@@ -98,4 +99,7 @@ __all__ = [
     "WorkspaceInsight",
     "ChatMessage",
     "SimulatedIntegrationAsset",
+    "AIWorkflowExecution",
+    "AIWorkflowStep",
 ]
+

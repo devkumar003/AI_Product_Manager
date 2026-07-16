@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Plus, Search, Calendar, FolderPlus, Copy, Archive, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 import { AppShell } from '@/components/layout/shell';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
@@ -29,6 +30,7 @@ interface ProjectItem {
 
 export default function ProjectsPage() {
   const { activeWorkspace } = useAuth();
+  const router = useRouter();
   const [search, setSearch] = React.useState('');
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [projects, setProjects] = React.useState<ProjectItem[]>([]);
@@ -80,6 +82,9 @@ export default function ProjectsPage() {
       setNewName('');
       setNewDesc('');
       setErrorName('');
+      
+      // Redirect to HUD
+      router.push(`/projects/${newProj.id}`);
     } catch (err: any) {
       setErrorName(err.message || 'Failed to create project.');
     }

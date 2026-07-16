@@ -36,12 +36,16 @@ async def lifespan(app: FastAPI):
     # Seed default integration plugins
     from app.database.session import SessionLocal
     from app.services.integration.plugin_manager import plugin_manager
+    from app.ai.orchestrator.service import orchestration_service
 
     db = SessionLocal()
     try:
         plugin_manager.seed_default_plugins(db)
     finally:
         db.close()
+
+    # Recover interrupted workflows
+    await orchestration_service.recover_interrupted_workflows()
 
     yield
     # Shutdown tasks

@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     invitations,
     notifications,
     organizations,
+    orchestrator,
     planning,
     projects,
     search,
@@ -32,6 +33,9 @@ api_router.include_router(
     invitations.router, prefix="/invitations", tags=["invitations"]
 )
 api_router.include_router(projects.router, prefix="/projects", tags=["projects"])
+api_router.include_router(
+    orchestrator.router, prefix="/orchestrator", tags=["orchestrator"]
+)
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(
     notifications.router, prefix="/notifications", tags=["notifications"]
